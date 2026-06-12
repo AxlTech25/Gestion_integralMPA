@@ -1,0 +1,70 @@
+Contexto del proyecto
+Estoy desarrollando el Sistema de Gestión Municipal Integral (SGMI) para la Municipalidad Provincial de Acobamba, Perú. Es un ERP interno (no portal ciudadano) construido con Laravel 12 + Vue 3 + MySQL 8. La interfaz será una SPA en Vue 3 con componentes propios. El sistema tiene ~200 usuarios internos, ~100 concurrentes, acceso solo en red municipal.
+
+Roles de usuario principales:
+
+Servidor público operativo (registra expedientes, gestiona bandeja)
+
+Supervisor de línea (aprueba derivaciones, monitorea pendientes de su unidad)
+
+Gerente (dashboard de su gerencia)
+
+Administrador de sistemas UTIS (gestiona usuarios, roles, inventario TI)
+
+Auditor OCI (solo lectura de registros)
+
+Alcaldía / Gerencia Municipal (vista ejecutiva, paneles generales)
+
+Módulos del MVP (Fase 1):
+
+NÚCLEO — Login, gestión de usuarios, RBAC por organigrama
+
+MOD-DOC — Gestión documentaria: registro de expedientes con numeración por tipo/año, derivación entre unidades, devolución con observaciones, bandeja de pendientes, trazabilidad/historial, firma digital y sello institucional, búsqueda, catálogo de tipos documentales
+
+MOD-PAT-TI — Inventario de equipos informáticos, fichas técnicas, mantenimiento, incidencias, predicción de riesgo con semáforo (Random Forest)
+
+MOD-DASH — Dashboard estratégico con métricas de tramitación e indicadores TI
+
+Lo que necesito que diseñes:
+Diseña mockups de alta fidelidad en HTML + CSS (sin JavaScript ni lógica, solo estructura visual y estilos) para las siguientes 6 pantallas prioritarias:
+
+Login institucional — formulario con logo MPA, usuario/contraseña, bloqueo tras 5 intentos
+
+Layout principal / Shell del sistema — sidebar con navegación por módulos según rol, header con usuario activo y unidad, área de contenido principal. Esta pantalla es el contenedor de todas las demás.
+
+Bandeja de pendientes (MOD-DOC) — tabla con columnas: código expediente, tipo documental, asunto, prioridad (alta/media/baja), antigüedad, unidad origen; filtros reactivos por prioridad y tipo; botones de acción: Derivar / Devolver / Ver detalle
+
+Formulario de registro de expediente — campos: tipo documental (select del catálogo), asunto (texto), unidad origen (select del organigrama), prioridad, adjunto PDF opcional; numeración auto-asignada visible; validaciones de campos obligatorios
+
+Vista de trazabilidad/historial de expediente — línea de tiempo vertical con cada movimiento: fecha, usuario, unidad, acción (Registrado / Derivado / Devuelto / Firmado), observación, tiempo de permanencia en cada oficina
+
+Dashboard ejecutivo (MOD-DASH) — KPIs en tarjetas: expedientes pendientes, expedientes tramitados hoy, equipos en riesgo (semáforo TI); gráfico de barras de tramitación por gerencia; tabla resumen de alertas TI
+
+Sistema de diseño requerido:
+
+Paleta: Usa colores institucionales sobrios acordes a una entidad pública peruana. Preferencia por azul marino o azul institucional como color primario, blanco/gris claro como superficie, con un acento de color para acciones primarias. Nada de gradientes llamativos ni colores brillantes.
+
+Tipografía: Sans-serif legible para uso en pantalla intensivo (Inter o equivalente). Tamaño base 16px. Jerarquía clara de encabezados.
+
+Tono visual: Formal, funcional, gubernamental. Parecido a sistemas como SIGA o SIAF del Estado peruano pero más moderno y limpio. No material design puro, no estilo startup SaaS.
+
+Densidad: Alta — son usuarios que trabajan 8 horas seguidas en el sistema. Tablas compactas, formularios eficientes, sidebar colapsable.
+
+Modo claro obligatorio. Modo oscuro opcional como "Should have".
+
+Componentes reutilizables: botones primario/secundario/peligro, badges de estado (Registrado, En tránsito, Devuelto, Archivado), badges de prioridad (Alta=rojo, Media=amarillo, Baja=gris), tabla estándar con paginación, card de KPI.
+
+Entregable esperado:
+
+Un archivo HTML por pantalla (o un único HTML con navegación por secciones/pestañas si lo prefieres)
+
+CSS embebido o en <style>, sin dependencias externas excepto una fuente Google/Fontshare
+
+Sin JavaScript funcional — solo estructura visual
+
+Comentarios en el HTML indicando qué componente Vue corresponderá a cada sección
+
+Cada pantalla debe tener datos de ejemplo realistas (nombres de unidades reales de una municipalidad peruana, tipos documentales como "Memorándum", "Resolución de Alcaldía", "Informe", etc.)
+
+Restricción importante: Este sistema es exclusivamente para uso interno en red municipal. No hay portal ciudadano. Los usuarios son empleados municipales capacitados, por lo que se prioriza eficiencia y densidad de información sobre simplicidad de onboarding.
+
