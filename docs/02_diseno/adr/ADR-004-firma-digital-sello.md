@@ -11,7 +11,7 @@
 
 ## Contexto
 
-Todos los documentos del expediente requieren **firma digital** y **sello institucional** antes o durante el flujo de tramitación (HU-DOC-08). No se especificó proveedor de certificados digitales Perú (IOFE, RENIEC, etc.) en Fase 1.
+Todos los documentos del expediente requieren **firma digital** y **sello institucional** antes o durante el flujo de tramitación (HU-DOC-08). En cada unidad que recepciona o remite, la firma y el sello sustituyen la constancia que antes se dejaba en la **hoja de cargo física** (PA-28; ver [digitalizacion-tramite-documentario.md](../../01_requisitos/digitalizacion-tramite-documentario.md)). No se especificó proveedor de certificados digitales Perú (IOFE, RENIEC, etc.) en Fase 1.
 
 ## Decisión
 

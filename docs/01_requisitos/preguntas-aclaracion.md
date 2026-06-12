@@ -32,6 +32,15 @@
 | **PA-20** | Uso **solo en red municipal**. |
 | **PA-21** | Interfaz **100% en castellano**. |
 | **PA-22** | ~**200** usuarios registrados; ~**100** concurrentes. |
+| **PA-23** | **Una sola aplicación SGMI** con menú por rol/permisos; **no** ventanas o apps separadas por área. |
+| **PA-24** | Flujo documental **multietapa** entre unidades; un expediente con **historial**; puede volver a unidad origen. |
+| **PA-25** | Estado **rechazado** **no se usa** en la entidad; Fase 1 sin rechazo en UI/API. |
+| **PA-26** | **Rutas libres**: operador elige destino al derivar; sin plantillas obligatorias por tipo documental. |
+| **PA-27** | **Devolución automática** a unidad **remitente inmediata** (quien derivó al destino actual); observación obligatoria. |
+| **PA-28** | **Seguimiento digital** sin cargo físico: expediente único + historial de movimientos; firma y sello por unidad en cada recepción/derivación; trazabilidad en pantalla sustituye la hoja de cargo para seguimiento interno. |
+| **PA-29** | **Gestión por área según tipo documental**: catálogo de normas legales con **unidad emisora**; cada área registra y tramita sus tipos; Alcaldía/Concejo vía Secretaría General; numeración por tipo y año. |
+
+**Documentación detallada:** [catalogo-tipos-normas-documentales.md](./catalogo-tipos-normas-documentales.md), [digitalizacion-tramite-documentario.md](./digitalizacion-tramite-documentario.md), [arquitectura-interfaz-y-modulos.md](./arquitectura-interfaz-y-modulos.md), [flujo-documentario-multietapa.md](../02_diseno/flujo-documentario-multietapa.md).
 
 ---
 
@@ -62,6 +71,8 @@
 | PA-09 | Ambigüedad | Formato de código | Media | Secretaría General administra; códigos por tipo documental y año (no único global). |
 | PA-10 | Implícito | Devolución de expedientes | Media | Devolución a unidad anterior permitida con observaciones. |
 | PA-11 | Implícito | SLA por trámite | Media | No hay plazos máximos; sin módulo SLA en Fase 1. |
+| PA-28 | Implícito | Cargo físico vs seguimiento digital | Alta | Sin cargo como mecanismo principal; expediente digital + movimientos firmados/sellados; ver [digitalizacion-tramite-documentario.md](./digitalizacion-tramite-documentario.md). |
+| PA-29 | Implícito | Tipos documentales por área | Alta | Catálogo normas legales con unidad emisora; gestión de expedientes por tipo y área; ver [catalogo-tipos-normas-documentales.md](./catalogo-tipos-normas-documentales.md). |
 
 ### Patrimonial TI (S.05 / S.06)
 

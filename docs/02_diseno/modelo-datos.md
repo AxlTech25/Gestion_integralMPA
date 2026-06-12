@@ -1,8 +1,9 @@
 # Modelo de datos — SGMI Fase 1
 
-**Versión:** 1.0  
+**Versión:** 2.0  
 **Motor:** MySQL 8.0+ (MariaDB 10.6+ compatible, utf8mb4)  
 **Script:** [schema-inicial.sql](./schema-inicial.sql)  
+**Guía integral:** [base-datos-sgmi.md](./base-datos-sgmi.md)  
 **Prompt:** D-001
 
 ---
@@ -22,11 +23,15 @@ erDiagram
     TIPOS_DOCUMENTALES ||--o{ EXPEDIENTES : "tipo"
     UNIDADES_ORGANIZACIONALES ||--o{ EXPEDIENTES : "origen_actual"
     EXPEDIENTES ||--o{ DOCUMENTOS : "contiene"
+    TIPOS_DOCUMENTALES ||--o{ TIPO_DOC_UNIDADES_REG : "registro_area"
+    UNIDADES_ORGANIZACIONALES ||--o{ TIPOS_DOCUMENTALES : "emisora"
     EXPEDIENTES ||--o{ EXPEDIENTE_MOVIMIENTOS : "historial"
+    EXPEDIENTE_MOVIMIENTOS ||--o| TRAMITE_CONSTANCIAS : "constancia"
     EXPEDIENTES ||--o{ EXPEDIENTE_ADJUNTOS : "adjuntos"
     DOCUMENTOS ||--o| DOCUMENTO_FIRMAS : "firma"
     DOCUMENTOS ||--o| DOCUMENTO_SELLOS : "sello"
     USUARIOS ||--o{ DOCUMENTO_FIRMAS : "firmante"
+    UNIDADES_ORGANIZACIONALES ||--o{ SELLOS_INSTITUCIONALES : "sello"
 
     UNIDADES_ORGANIZACIONALES ||--o{ EQUIPOS : "ubicacion"
     EQUIPOS ||--o{ FICHAS_TECNICAS : "ficha_tecnica"
@@ -51,7 +56,7 @@ erDiagram
 | codigo_org | VARCHAR(20) UNIQUE | ORG-001 … ORG-061 |
 | codigo_siga | VARCHAR(50) NULL | Mapeo SIGA |
 | nombre | VARCHAR(200) | |
-| tipo | ENUM | `gerencia`, `unidad`, `comite` |
+| tipo | ENUM | `politico`, `ejecutivo`, `gerencia`, `unidad`, `comite` |
 | permite_derivacion | BOOLEAN | `false` para comités (PA-04) |
 | gerencia_id | FK self NULL | Gerencia real (PA-05) |
 | padre_id | FK self NULL | Jerarquía |
@@ -116,17 +121,38 @@ Append-only (RNF-07). Sin UPDATE/DELETE desde aplicación.
 
 ### `tipos_documentales`
 
-Catálogo institucional (PA-07). Administrado por Secretaría General.
+Catálogo institucional (PA-07, PA-29). Administrado por Secretaría General. Listado inicial de normas legales: [catalogo-tipos-normas-documentales.md](../01_requisitos/catalogo-tipos-normas-documentales.md).
 
 | Columna | Tipo | Descripción |
 |---------|------|-------------|
 | id | BIGINT UNSIGNED PK | |
-| codigo | VARCHAR(20) UNIQUE | Código interno |
-| nombre | VARCHAR(150) | |
-| prefijo_numeracion | VARCHAR(20) | Ej. MEM, INF, SOL |
+| codigo | VARCHAR(20) UNIQUE | Código interno (ej. RAL, DAL, RGPPM) |
+| nombre | VARCHAR(150) | Nombre institucional |
+| prefijo_numeracion | VARCHAR(20) | Ej. RAL, ACM, RGDES |
 | formato_display | VARCHAR(50) | Ej. `{prefijo}-{anio}-{secuencial}` |
+| clase_norma | ENUM | `acuerdo`, `decreto`, `ordenanza`, `resolucion`, `directiva`, `otro` |
+| ambito_emision | ENUM | `concejo`, `alcaldia`, `gerencia_municipal`, `gerencia`, `sub_gerencia`, `unidad` |
+| unidad_emisora_id | FK nullable | Unidad que gestiona y registra el tipo (PA-29) |
+| registro_por_secretaria | BOOLEAN DEFAULT false | Secretaría General puede registrar en nombre de emisor |
 | requiere_firma_antes_derivar | BOOLEAN DEFAULT true | |
 | activo | BOOLEAN | |
+
+| requiere_recepcion | BOOLEAN DEFAULT true | Acuse digital al derivar (PA-28) |
+
+**Regla registro:** selector de tipo filtra por `unidad_emisora_id` = unidad activa del usuario (o hijas en `tipo_documental_unidades_registro`), o `registro_por_secretaria` + rol Secretaría General.
+
+### `tipo_documental_unidades_registro` (PA-29)
+
+Sub-unidades autorizadas a registrar un tipo además de la unidad emisora.
+
+| Columna | Tipo |
+|---------|------|
+| tipo_documental_id | FK PK |
+| unidad_id | FK PK |
+
+### `sellos_institucionales`
+
+Imagen de sello municipal (`unidad_id` NULL) o por unidad.
 
 ### `numeraciones_expediente`
 
@@ -154,8 +180,11 @@ Secuencia **por tipo + año** (PA-09). No código global único.
 | prioridad | ENUM | `baja`, `media`, `alta`, `urgente` |
 | unidad_origen_id | FK | |
 | unidad_actual_id | FK | Bandeja actual |
-| estado | ENUM | `registrado`, `en_tramite`, `archivado` |
+| estado | ENUM | `registrado`, `por_recepcionar`, `en_tramite`, `devuelto`, `archivado` |
+| documento_principal_id | FK documentos NULL | PDF principal vigente |
 | registrado_por | FK usuarios | |
+| archivado_por | FK NULL | |
+| archivado_at | TIMESTAMP NULL | |
 | timestamps | | |
 
 **Índice único:** `(tipo_documental_id, anio, secuencial)`  
@@ -173,18 +202,23 @@ Un expediente puede tener uno o más documentos (versiones).
 | titulo | VARCHAR(300) |
 | archivo_path | VARCHAR(500) NULL |
 | hash_contenido | VARCHAR(64) | SHA-256 para firma |
+| es_principal | BOOLEAN | Documento principal del expediente |
+| documento_anterior_id | FK self NULL | Cadena de versiones |
 | estado | ENUM | `borrador`, `pendiente_firma`, `firmado` |
 | creado_por | FK |
 
 ### `documento_firmas` (PA-08)
+
+Firma del **contenido** del documento (PDF).
 
 | Columna | Tipo |
 |---------|------|
 | id | BIGINT UNSIGNED PK |
 | documento_id | FK UNIQUE |
 | usuario_id | FK firmante |
-| firma_hash | VARCHAR(128) | Hash documento+usuario+timestamp |
-| firma_metadata | JSON | Certificado futuro |
+| unidad_id | FK | Unidad al firmar |
+| firma_hash | VARCHAR(128) |
+| firma_metadata | JSON |
 | firmado_at | TIMESTAMP |
 
 ### `documento_sellos` (PA-08)
@@ -193,6 +227,7 @@ Un expediente puede tener uno o más documentos (versiones).
 |---------|------|
 | id | BIGINT UNSIGNED PK |
 | documento_id | FK UNIQUE |
+| sello_institucional_id | FK NULL |
 | sello_imagen_path | VARCHAR(500) |
 | sello_metadata | JSON |
 | aplicado_at | TIMESTAMP |
@@ -203,15 +238,36 @@ Un expediente puede tener uno o más documentos (versiones).
 |---------|------|
 | id | BIGINT UNSIGNED PK |
 | expediente_id | FK |
-| tipo_movimiento | ENUM | `registro`, `derivacion`, `devolucion` |
+| tipo_movimiento | ENUM | `registro`, `recepcion`, `derivacion`, `devolucion` |
 | unidad_origen_id | FK NULL |
 | unidad_destino_id | FK NULL |
+| unidad_actuante_id | FK | Unidad que ejecuta el acto |
 | usuario_id | FK |
 | observacion | TEXT | Obligatoria en devolución |
 | proveido | TEXT NULL |
 | created_at | TIMESTAMP |
 
-**Bandeja:** expedientes donde `unidad_actual_id` = unidad del usuario y documentos pendientes de firma según rol.
+### `tramite_constancias` (PA-28)
+
+Sustituto digital del cargo: firma + sello por movimiento de trámite.
+
+| Columna | Tipo |
+|---------|------|
+| id | BIGINT UNSIGNED PK |
+| expediente_movimiento_id | FK UNIQUE |
+| documento_id | FK NULL | PDF tras sello si aplica |
+| usuario_id | FK |
+| unidad_id | FK |
+| tipo_acto | ENUM | `recepcion`, `proveido_salida`, `devolucion`, `firma_documento` |
+| firma_hash | VARCHAR(128) |
+| sello_institucional_id | FK NULL |
+| sello_imagen_path | VARCHAR(500) NULL |
+| sello_texto | VARCHAR(500) NULL |
+| pdf_resultante_path | VARCHAR(500) NULL |
+| sello_metadata | JSON |
+| created_at | TIMESTAMP |
+
+**Bandeja:** `v_bandeja_pendientes` o expedientes donde `unidad_actual_id` = unidad del usuario.
 
 ### `expediente_adjuntos`
 
@@ -341,6 +397,21 @@ Un expediente puede tener uno o más documentos (versiones).
 | mensaje | TEXT NULL |
 | ejecutado_por | FK NULL |
 | ejecutado_at | TIMESTAMP |
+
+### `sync_log_detalles`
+
+Detalle por registro importado en una sincronización.
+
+| Columna | Tipo |
+|---------|------|
+| id | BIGINT UNSIGNED PK |
+| sync_log_id | FK |
+| entidad_externa | VARCHAR(50) |
+| referencia | VARCHAR(100) NULL |
+| entidad_local | VARCHAR(50) NULL |
+| entidad_local_id | BIGINT NULL |
+| estado | ENUM | `ok`, `error`, `omitido` |
+| mensaje | TEXT NULL |
 
 ### `siaf_ejecucion_snapshots` (PA-18)
 

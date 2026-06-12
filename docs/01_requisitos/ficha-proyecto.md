@@ -32,7 +32,7 @@ Centralizar, automatizar y optimizar las operaciones internas de la Municipalida
 
 ## Problema que resuelve
 
-- Tramitación documentaria con traslado físico de papel y baja trazabilidad.
+- Tramitación documentaria con traslado físico de papel, **hojas de cargo** para seguimiento y baja trazabilidad (ver [digitalizacion-tramite-documentario.md](./digitalizacion-tramite-documentario.md)).
 - Inventario de equipos informáticos disperso y mantenimiento reactivo.
 - Falta de visión consolidada para la alta dirección sobre eficiencia y riesgos.
 - Duplicidad de registros entre unidades y sistemas del Estado (SIGA, SIAF).
@@ -113,3 +113,5 @@ Centralizar, automatizar y optimizar las operaciones internas de la Municipalida
 - [Matriz de requisitos](./matriz-requisitos.md)
 - [Preguntas de aclaración](./preguntas-aclaracion.md)
 - [Decisiones confirmadas](./decisiones-confirmadas.md)
+- [Digitalización del trámite documentario](./digitalizacion-tramite-documentario.md)
+- [Catálogo tipos de normas y documentos legales](./catalogo-tipos-normas-documentales.md)

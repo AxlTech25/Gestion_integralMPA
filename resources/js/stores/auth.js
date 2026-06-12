@@ -8,6 +8,18 @@ export const useAuthStore = defineStore('auth', {
         loading: false,
         error: null,
     }),
+    getters: {
+        permisos: (state) => state.user?.permisos ?? [],
+        menu: (state) => state.user?.menu ?? [],
+        nucleoMenu: (state) => state.user?.nucleo_menu ?? [],
+        patrimonioMenu: (state) => state.user?.patrimonio_menu ?? [],
+        can: (state) => (codigo) => {
+            if (!state.user) return false;
+            if (state.user.permisos?.includes(codigo)) return true;
+            if (state.user.roles?.some((r) => r.codigo === 'ADMIN_SISTEMA')) return true;
+            return false;
+        },
+    },
     actions: {
         async fetchUser() {
             try {
@@ -27,7 +39,14 @@ export const useAuthStore = defineStore('auth', {
                 await axios.post('/api/login', { username, password });
                 await this.fetchUser();
             } catch (e) {
-                this.error = e.response?.data?.message ?? 'Credenciales inválidas';
+                const data = e.response?.data;
+                if (data?.errors?.username?.[0]) {
+                    this.error = data.errors.username[0];
+                } else if (data?.message && data.message !== 'The given data was invalid.') {
+                    this.error = data.message;
+                } else {
+                    this.error = 'Credenciales inválidas. Verifique usuario y contraseña.';
+                }
                 throw e;
             } finally {
                 this.loading = false;

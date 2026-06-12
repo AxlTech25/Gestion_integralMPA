@@ -1,8 +1,8 @@
--- SGMI - Schema inicial Fase 1
+-- SGMI - Schema integral Fase 1
 -- Motor: MySQL 8.0+ (MariaDB 10.6+ compatible)
 -- Charset: utf8mb4
--- Versión: 1.1 (migrado desde PostgreSQL)
--- Generado desde: docs/02_diseno/modelo-datos.md
+-- Versión: 2.0
+-- Documentación: docs/02_diseno/base-datos-sgmi.md
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -16,7 +16,7 @@ CREATE TABLE unidades_organizacionales (
     codigo_org          VARCHAR(20) NOT NULL,
     codigo_siga         VARCHAR(50) NULL,
     nombre              VARCHAR(200) NOT NULL,
-    tipo                ENUM('gerencia', 'unidad', 'comite') NOT NULL,
+    tipo                ENUM('politico', 'ejecutivo', 'gerencia', 'unidad', 'comite') NOT NULL,
     permite_derivacion  TINYINT(1) NOT NULL DEFAULT 0,
     gerencia_id         BIGINT UNSIGNED NULL,
     padre_id            BIGINT UNSIGNED NULL,
@@ -116,7 +116,7 @@ CREATE TABLE auditoria_logs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- DOCUMENTARIA
+-- DOCUMENTARIA — catálogo
 -- ============================================================================
 
 CREATE TABLE tipos_documentales (
@@ -125,11 +125,26 @@ CREATE TABLE tipos_documentales (
     nombre                       VARCHAR(150) NOT NULL,
     prefijo_numeracion           VARCHAR(20) NOT NULL,
     formato_display              VARCHAR(50) NOT NULL DEFAULT '{prefijo}-{anio}-{secuencial}',
+    clase_norma                  ENUM('acuerdo','decreto','ordenanza','resolucion','directiva','gestion_interna','otro') NOT NULL DEFAULT 'otro',
+    ambito_emision               ENUM('concejo','alcaldia','gerencia_municipal','gerencia','sub_gerencia','unidad') NOT NULL DEFAULT 'unidad',
+    unidad_emisora_id            BIGINT UNSIGNED NULL,
+    registro_por_secretaria      TINYINT(1) NOT NULL DEFAULT 0,
     requiere_firma_antes_derivar TINYINT(1) NOT NULL DEFAULT 1,
+    requiere_recepcion           TINYINT(1) NOT NULL DEFAULT 1,
     activo                       TINYINT(1) NOT NULL DEFAULT 1,
     created_at                   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_tipos_codigo (codigo)
+    UNIQUE KEY uk_tipos_codigo (codigo),
+    KEY idx_tipos_emisora (unidad_emisora_id, activo),
+    CONSTRAINT fk_tipos_unidad_emisora FOREIGN KEY (unidad_emisora_id) REFERENCES unidades_organizacionales(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE tipo_documental_unidades_registro (
+    tipo_documental_id  BIGINT UNSIGNED NOT NULL,
+    unidad_id           BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (tipo_documental_id, unidad_id),
+    CONSTRAINT fk_tdur_tipo FOREIGN KEY (tipo_documental_id) REFERENCES tipos_documentales(id) ON DELETE CASCADE,
+    CONSTRAINT fk_tdur_unidad FOREIGN KEY (unidad_id) REFERENCES unidades_organizacionales(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE numeraciones_expediente (
@@ -141,6 +156,24 @@ CREATE TABLE numeraciones_expediente (
     CONSTRAINT fk_numeracion_tipo FOREIGN KEY (tipo_documental_id) REFERENCES tipos_documentales(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE sellos_institucionales (
+    id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    unidad_id       BIGINT UNSIGNED NULL,
+    nombre          VARCHAR(150) NOT NULL,
+    imagen_path     VARCHAR(500) NOT NULL,
+    activo          TINYINT(1) NOT NULL DEFAULT 1,
+    vigente_desde   DATE NULL,
+    vigente_hasta   DATE NULL,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_sellos_unidad (unidad_id, activo),
+    CONSTRAINT fk_sellos_unidad FOREIGN KEY (unidad_id) REFERENCES unidades_organizacionales(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- DOCUMENTARIA — expediente y trámite
+-- ============================================================================
+
 CREATE TABLE expedientes (
     id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     tipo_documental_id  BIGINT UNSIGNED NOT NULL,
@@ -151,76 +184,118 @@ CREATE TABLE expedientes (
     prioridad           ENUM('baja', 'media', 'alta', 'urgente') NOT NULL DEFAULT 'media',
     unidad_origen_id    BIGINT UNSIGNED NOT NULL,
     unidad_actual_id    BIGINT UNSIGNED NOT NULL,
-    estado              ENUM('registrado', 'en_tramite', 'archivado') NOT NULL DEFAULT 'registrado',
+    estado              ENUM('registrado', 'por_recepcionar', 'en_tramite', 'devuelto', 'archivado') NOT NULL DEFAULT 'registrado',
+    documento_principal_id BIGINT UNSIGNED NULL,
     registrado_por      BIGINT UNSIGNED NOT NULL,
+    archivado_por       BIGINT UNSIGNED NULL,
+    archivado_at        TIMESTAMP NULL,
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_expediente_tipo_anio_sec (tipo_documental_id, anio, secuencial),
-    KEY idx_expedientes_codigo (codigo),
-    KEY idx_expedientes_unidad_actual (unidad_actual_id, estado),
+    UNIQUE KEY uk_expedientes_codigo (codigo),
+    KEY idx_expedientes_unidad_actual (unidad_actual_id, estado, prioridad),
+    KEY idx_expedientes_origen (unidad_origen_id),
     FULLTEXT KEY ft_expedientes_asunto (asunto),
     CONSTRAINT fk_exp_tipo FOREIGN KEY (tipo_documental_id) REFERENCES tipos_documentales(id),
     CONSTRAINT fk_exp_origen FOREIGN KEY (unidad_origen_id) REFERENCES unidades_organizacionales(id),
     CONSTRAINT fk_exp_actual FOREIGN KEY (unidad_actual_id) REFERENCES unidades_organizacionales(id),
-    CONSTRAINT fk_exp_registrador FOREIGN KEY (registrado_por) REFERENCES usuarios(id)
+    CONSTRAINT fk_exp_registrador FOREIGN KEY (registrado_por) REFERENCES usuarios(id),
+    CONSTRAINT fk_exp_archivador FOREIGN KEY (archivado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE documentos (
-    id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    expediente_id   BIGINT UNSIGNED NOT NULL,
-    version         SMALLINT NOT NULL DEFAULT 1,
-    titulo          VARCHAR(300) NOT NULL,
-    archivo_path    VARCHAR(500) NULL,
-    hash_contenido  VARCHAR(64) NULL,
-    estado          ENUM('borrador', 'pendiente_firma', 'firmado') NOT NULL DEFAULT 'borrador',
-    creado_por      BIGINT UNSIGNED NOT NULL,
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    KEY idx_documentos_expediente (expediente_id),
+    id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    expediente_id       BIGINT UNSIGNED NOT NULL,
+    version             SMALLINT NOT NULL DEFAULT 1,
+    titulo              VARCHAR(300) NOT NULL,
+    es_principal        TINYINT(1) NOT NULL DEFAULT 0,
+    documento_anterior_id BIGINT UNSIGNED NULL,
+    archivo_path        VARCHAR(500) NULL,
+    hash_contenido      VARCHAR(64) NULL,
+    estado              ENUM('borrador', 'pendiente_firma', 'firmado') NOT NULL DEFAULT 'borrador',
+    creado_por          BIGINT UNSIGNED NOT NULL,
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_documentos_expediente (expediente_id, es_principal),
     CONSTRAINT fk_doc_expediente FOREIGN KEY (expediente_id) REFERENCES expedientes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_doc_anterior FOREIGN KEY (documento_anterior_id) REFERENCES documentos(id),
     CONSTRAINT fk_doc_creador FOREIGN KEY (creado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE expedientes
+    ADD CONSTRAINT fk_exp_documento_principal FOREIGN KEY (documento_principal_id) REFERENCES documentos(id);
 
 CREATE TABLE documento_firmas (
     id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     documento_id    BIGINT UNSIGNED NOT NULL,
     usuario_id      BIGINT UNSIGNED NOT NULL,
+    unidad_id       BIGINT UNSIGNED NOT NULL,
     firma_hash      VARCHAR(128) NOT NULL,
     firma_metadata  JSON NULL,
     firmado_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_firma_documento (documento_id),
     CONSTRAINT fk_firma_documento FOREIGN KEY (documento_id) REFERENCES documentos(id) ON DELETE CASCADE,
-    CONSTRAINT fk_firma_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    CONSTRAINT fk_firma_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_firma_unidad FOREIGN KEY (unidad_id) REFERENCES unidades_organizacionales(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE documento_sellos (
     id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     documento_id        BIGINT UNSIGNED NOT NULL,
+    sello_institucional_id BIGINT UNSIGNED NULL,
     sello_imagen_path   VARCHAR(500) NOT NULL,
     sello_metadata      JSON NULL,
     aplicado_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uk_sello_documento (documento_id),
-    CONSTRAINT fk_sello_documento FOREIGN KEY (documento_id) REFERENCES documentos(id) ON DELETE CASCADE
+    CONSTRAINT fk_sello_documento FOREIGN KEY (documento_id) REFERENCES documentos(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sello_institucional FOREIGN KEY (sello_institucional_id) REFERENCES sellos_institucionales(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE expediente_movimientos (
     id                  BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     expediente_id       BIGINT UNSIGNED NOT NULL,
-    tipo_movimiento     ENUM('registro', 'derivacion', 'devolucion') NOT NULL,
+    tipo_movimiento     ENUM('registro', 'recepcion', 'derivacion', 'devolucion') NOT NULL,
     unidad_origen_id    BIGINT UNSIGNED NULL,
     unidad_destino_id   BIGINT UNSIGNED NULL,
+    unidad_actuante_id  BIGINT UNSIGNED NOT NULL,
     usuario_id          BIGINT UNSIGNED NOT NULL,
     observacion         TEXT NULL,
     proveido            TEXT NULL,
     created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_movimientos_expediente (expediente_id, created_at),
+    KEY idx_movimientos_destino (unidad_destino_id, created_at),
     CONSTRAINT fk_mov_expediente FOREIGN KEY (expediente_id) REFERENCES expedientes(id) ON DELETE CASCADE,
     CONSTRAINT fk_mov_origen FOREIGN KEY (unidad_origen_id) REFERENCES unidades_organizacionales(id),
     CONSTRAINT fk_mov_destino FOREIGN KEY (unidad_destino_id) REFERENCES unidades_organizacionales(id),
+    CONSTRAINT fk_mov_actuante FOREIGN KEY (unidad_actuante_id) REFERENCES unidades_organizacionales(id),
     CONSTRAINT fk_mov_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     CONSTRAINT chk_devolucion_observacion CHECK (
         tipo_movimiento <> 'devolucion' OR observacion IS NOT NULL AND CHAR_LENGTH(TRIM(observacion)) > 0
     )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE tramite_constancias (
+    id                      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    expediente_movimiento_id BIGINT UNSIGNED NOT NULL,
+    documento_id            BIGINT UNSIGNED NULL,
+    usuario_id              BIGINT UNSIGNED NOT NULL,
+    unidad_id               BIGINT UNSIGNED NOT NULL,
+    tipo_acto               ENUM('recepcion', 'proveido_salida', 'devolucion', 'firma_documento') NOT NULL,
+    firma_hash              VARCHAR(128) NOT NULL,
+    firma_metadata          JSON NULL,
+    sello_institucional_id  BIGINT UNSIGNED NULL,
+    sello_imagen_path       VARCHAR(500) NULL,
+    sello_texto             VARCHAR(500) NULL,
+    pdf_resultante_path     VARCHAR(500) NULL,
+    sello_metadata          JSON NULL,
+    created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_constancia_movimiento (expediente_movimiento_id),
+    KEY idx_constancias_unidad (unidad_id, created_at),
+    CONSTRAINT fk_const_movimiento FOREIGN KEY (expediente_movimiento_id) REFERENCES expediente_movimientos(id) ON DELETE CASCADE,
+    CONSTRAINT fk_const_documento FOREIGN KEY (documento_id) REFERENCES documentos(id),
+    CONSTRAINT fk_const_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_const_unidad FOREIGN KEY (unidad_id) REFERENCES unidades_organizacionales(id),
+    CONSTRAINT fk_const_sello FOREIGN KEY (sello_institucional_id) REFERENCES sellos_institucionales(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE expediente_adjuntos (
@@ -230,6 +305,7 @@ CREATE TABLE expediente_adjuntos (
     path            VARCHAR(500) NOT NULL,
     mime_type       VARCHAR(100) NOT NULL,
     tamano_bytes    BIGINT NOT NULL,
+    hash_archivo    VARCHAR(64) NULL,
     subido_por      BIGINT UNSIGNED NOT NULL,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_adjuntos_expediente (expediente_id),
@@ -260,6 +336,7 @@ CREATE TABLE equipos (
     updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_equipo_patrimonial (codigo_patrimonial),
     KEY idx_equipos_unidad (unidad_id),
+    KEY idx_equipos_siga (codigo_siga),
     CONSTRAINT fk_equipos_unidad FOREIGN KEY (unidad_id) REFERENCES unidades_organizacionales(id),
     CONSTRAINT fk_equipos_registrador FOREIGN KEY (registrado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -309,6 +386,7 @@ CREATE TABLE incidencias (
     created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     cerrada_at       TIMESTAMP NULL,
     KEY idx_incidencias_estado (estado, created_at),
+    KEY idx_incidencias_equipo (equipo_id, created_at),
     CONSTRAINT fk_incid_equipo FOREIGN KEY (equipo_id) REFERENCES equipos(id),
     CONSTRAINT fk_incid_reportador FOREIGN KEY (reportado_por) REFERENCES usuarios(id),
     CONSTRAINT fk_incid_utis FOREIGN KEY (asignado_utis_id) REFERENCES usuarios(id)
@@ -358,6 +436,20 @@ CREATE TABLE sync_logs (
     CONSTRAINT fk_sync_usuario FOREIGN KEY (ejecutado_por) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE sync_log_detalles (
+    id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sync_log_id     BIGINT UNSIGNED NOT NULL,
+    entidad_externa VARCHAR(50) NOT NULL,
+    referencia      VARCHAR(100) NULL,
+    entidad_local   VARCHAR(50) NULL,
+    entidad_local_id BIGINT UNSIGNED NULL,
+    estado          ENUM('ok', 'error', 'omitido') NOT NULL,
+    mensaje         TEXT NULL,
+    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_sync_detalle_log (sync_log_id),
+    CONSTRAINT fk_sync_detalle_log FOREIGN KEY (sync_log_id) REFERENCES sync_logs(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE siaf_ejecucion_snapshots (
     id                      BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     periodo                 VARCHAR(20) NOT NULL,
@@ -369,6 +461,102 @@ CREATE TABLE siaf_ejecucion_snapshots (
     sincronizado_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_siaf_periodo (periodo, sincronizado_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- VISTAS — dashboard y bandeja
+-- ============================================================================
+
+CREATE OR REPLACE VIEW v_bandeja_pendientes AS
+SELECT
+    e.id,
+    e.codigo,
+    e.asunto,
+    e.prioridad,
+    e.estado,
+    e.unidad_actual_id,
+    e.unidad_origen_id,
+    e.tipo_documental_id,
+    td.codigo AS tipo_codigo,
+    td.nombre AS tipo_nombre,
+    ua.nombre AS unidad_actual_nombre,
+    e.created_at,
+    e.updated_at
+FROM expedientes e
+INNER JOIN tipos_documentales td ON td.id = e.tipo_documental_id
+INNER JOIN unidades_organizacionales ua ON ua.id = e.unidad_actual_id
+WHERE e.estado IN ('por_recepcionar', 'en_tramite', 'devuelto', 'registrado');
+
+CREATE OR REPLACE VIEW v_expediente_timeline AS
+SELECT
+    m.id AS movimiento_id,
+    m.expediente_id,
+    m.tipo_movimiento,
+    m.observacion,
+    m.proveido,
+    m.created_at AS movimiento_at,
+    uo.nombre AS unidad_origen_nombre,
+    ud.nombre AS unidad_destino_nombre,
+    ua.nombre AS unidad_actuante_nombre,
+    us.nombre_completo AS usuario_nombre,
+    tc.tipo_acto,
+    tc.firma_hash,
+    tc.sello_texto,
+    tc.created_at AS constancia_at
+FROM expediente_movimientos m
+INNER JOIN unidades_organizacionales ua ON ua.id = m.unidad_actuante_id
+INNER JOIN usuarios us ON us.id = m.usuario_id
+LEFT JOIN unidades_organizacionales uo ON uo.id = m.unidad_origen_id
+LEFT JOIN unidades_organizacionales ud ON ud.id = m.unidad_destino_id
+LEFT JOIN tramite_constancias tc ON tc.expediente_movimiento_id = m.id;
+
+CREATE OR REPLACE VIEW v_dashboard_tramitacion AS
+SELECT
+    e.unidad_actual_id,
+    u.nombre AS unidad_nombre,
+    e.estado,
+    COUNT(*) AS total_expedientes
+FROM expedientes e
+INNER JOIN unidades_organizacionales u ON u.id = e.unidad_actual_id
+WHERE e.estado <> 'archivado'
+GROUP BY e.unidad_actual_id, u.nombre, e.estado;
+
+CREATE OR REPLACE VIEW v_equipos_riesgo AS
+SELECT
+    eq.id AS equipo_id,
+    eq.codigo_patrimonial,
+    eq.marca,
+    eq.modelo,
+    eq.estado_operativo,
+    eq.unidad_id,
+    p.probabilidad_falla,
+    p.nivel_riesgo,
+    p.calculado_at AS prediccion_at
+FROM equipos eq
+LEFT JOIN ml_predicciones p ON p.id = (
+    SELECT p2.id
+    FROM ml_predicciones p2
+    WHERE p2.equipo_id = eq.id
+    ORDER BY p2.calculado_at DESC
+    LIMIT 1
+);
+
+CREATE OR REPLACE VIEW v_equipos_utis AS
+SELECT
+    id,
+    codigo_patrimonial,
+    tipo_equipo,
+    marca,
+    modelo,
+    numero_serie,
+    estado_operativo,
+    unidad_id,
+    custodio_nombre,
+    custodio_cargo,
+    fecha_adquisicion,
+    created_at,
+    updated_at
+FROM equipos
+WHERE estado_operativo <> 'baja';
 
 -- ============================================================================
 -- SEED: Roles base
@@ -385,5 +573,25 @@ INSERT INTO roles (codigo, nombre) VALUES
     ('SUPERVISOR_UNIDAD', 'Supervisor de unidad'),
     ('OPERADOR', 'Operador'),
     ('AUDITOR_OCI', 'Auditor OCI');
+
+INSERT INTO permisos (codigo, modulo, descripcion) VALUES
+    ('core.usuarios.gestionar', 'NUCLEO', 'Gestionar usuarios y roles'),
+    ('core.auditoria.consultar', 'NUCLEO', 'Consultar auditoría'),
+    ('doc.expediente.registrar', 'MOD-DOC', 'Registrar expedientes'),
+    ('doc.expediente.consultar', 'MOD-DOC', 'Consultar expedientes'),
+    ('doc.expediente.derivar', 'MOD-DOC', 'Derivar expedientes'),
+    ('doc.expediente.devolver', 'MOD-DOC', 'Devolver expedientes'),
+    ('doc.expediente.recepcionar', 'MOD-DOC', 'Recepcionar y acusar expedientes'),
+    ('doc.expediente.archivar', 'MOD-DOC', 'Archivar expedientes'),
+    ('doc.documento.firmar', 'MOD-DOC', 'Firmar y sellar documentos'),
+    ('doc.tipos.gestionar', 'MOD-DOC', 'Administrar tipos documentales'),
+    ('pat.equipo.registrar', 'MOD-PAT-TI', 'Registrar equipos'),
+    ('pat.equipo.consultar', 'MOD-PAT-TI', 'Consultar equipos'),
+    ('pat.ficha.gestionar', 'MOD-PAT-TI', 'Gestionar fichas técnicas y mantenimiento'),
+    ('pat.incidencia.gestionar', 'MOD-PAT-TI', 'Gestionar incidencias TI'),
+    ('dash.tramitacion.ver', 'MOD-DASH', 'Ver dashboard tramitación'),
+    ('dash.estrategico.ver', 'MOD-DASH', 'Ver dashboard estratégico'),
+    ('dash.siaf.ver', 'MOD-DASH', 'Ver datos SIAF'),
+    ('int.sync.ejecutar', 'INT', 'Ejecutar sincronizaciones');
 
 SET FOREIGN_KEY_CHECKS = 1;

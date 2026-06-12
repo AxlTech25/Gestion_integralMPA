@@ -43,4 +43,22 @@ class UnidadOrganizacional extends Model
     {
         return $this->hasMany(Usuario::class, 'unidad_activa_id');
     }
+
+    public function hijos(): HasMany
+    {
+        return $this->hasMany(UnidadOrganizacional::class, 'padre_id');
+    }
+
+    public function scopeActivas($query)
+    {
+        return $query->where('activa', true);
+    }
+
+    public function scopeDestinoDerivacion($query)
+    {
+        return $query->activas()
+            ->where('permite_derivacion', true)
+            ->whereIn('tipo', ['gerencia', 'unidad', 'ejecutivo']);
+    }
 }
+

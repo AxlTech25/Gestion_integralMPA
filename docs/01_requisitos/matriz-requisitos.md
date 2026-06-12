@@ -1,7 +1,7 @@
 # Matriz de requisitos funcionales y no funcionales
 
-**Versión:** 1.1  
-**Estado:** Aprobado con decisiones PA-01 … PA-22  
+**Versión:** 1.3  
+**Estado:** Aprobado con decisiones PA-01 … PA-29  
 **Convención ID:** `RF-` requisito funcional, `RNF-` no funcional, `RI-` integración
 
 ---
@@ -29,15 +29,15 @@
 |----|-----------|---------|-----------|----------|--------|
 | RF-DOC-01 | Registrar expediente con numeración por tipo documental y año (Secretaría General) | S.01 | Must | HU-DOC-01 | Aprobado |
 | RF-DOC-02 | Asociar unidad origen, asunto, tipo documental y prioridad | S.01 | Must | HU-DOC-01 | Aprobado |
-| RF-DOC-03 | Derivar a unidad de gerencia real del organigrama | S.01 | Must | HU-DOC-02 | Aprobado |
+| RF-DOC-03 | Derivar a unidad del organigrama; destino **libre** elegido por operador (PA-26) | S.01 | Must | HU-DOC-02 | Aprobado |
 | RF-DOC-04 | Registrar observaciones y proveído en cada movimiento | S.01 | Must | HU-DOC-02 | Aprobado |
-| RF-DOC-05 | Devolver expediente a unidad anterior con observaciones | S.01 | Must | HU-DOC-02 | Aprobado |
-| RF-DOC-06 | Línea de tiempo: estado, responsables, tiempos por oficina | S.01 | Must | HU-DOC-03 | Aprobado |
+| RF-DOC-05 | Devolver con observación obligatoria; destino **automático** al remitente inmediato (PA-27) | S.01 | Must | HU-DOC-02 | Aprobado |
+| RF-DOC-06 | Línea de tiempo: estado, responsables, tiempos por oficina; sustituye seguimiento por cargo físico (PA-28) | S.01 | Must | HU-DOC-03 | Aprobado |
 | RF-DOC-07 | Bandeja personalizada de pendientes | S.01 | Must | HU-DOC-04 | Aprobado |
 | RF-DOC-08 | Filtrar bandeja por prioridad, antigüedad y tipo | S.01 | Should | HU-DOC-04 | Aprobado |
 | RF-DOC-09 | Adjuntar archivos digitalizados | S.01 | Should | HU-DOC-05 | Aprobado |
 | RF-DOC-10 | Buscar por código, asunto o unidad en tiempo real | S.01 | Must | HU-DOC-06 | Aprobado |
-| RF-DOC-11 | Catálogo de tipos documentales institucional | S.01 | Must | HU-DOC-07 | Aprobado |
+| RF-DOC-11 | Catálogo de tipos documentales institucional; unidad emisora por tipo; gestión por área (PA-29) | S.01 | Must | HU-DOC-07 | Aprobado |
 | RF-DOC-12 | Firma digital obligatoria en todos los documentos | S.01 | Must | HU-DOC-08 | Aprobado |
 | RF-DOC-13 | Sello institucional en cada documento | S.01 | Must | HU-DOC-08 | Aprobado |
 
@@ -108,7 +108,18 @@
 
 ---
 
-## Trazabilidad resumida (v1.1)
+## Aclaraciones v1.2 (PA-23 … PA-27)
+
+| Tema | Detalle | Documento |
+|------|---------|-----------|
+| Interfaz | Una app SGMI; menú por rol; no apps por área | [arquitectura-interfaz-y-modulos.md](./arquitectura-interfaz-y-modulos.md) |
+| Flujo multietapa | Expediente circula entre unidades con historial | [flujo-documentario-multietapa.md](../02_diseno/flujo-documentario-multietapa.md) |
+| Rechazo | No usado en entidad; sin implementar Fase 1 | PA-25 |
+| Rutas | Sin plantillas fijas por tipo documental | PA-26 |
+
+---
+
+## Trazabilidad resumida (v1.2)
 
 | Módulo | RF | Must | Should |
 |--------|-----|------|--------|

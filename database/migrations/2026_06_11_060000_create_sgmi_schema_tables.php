@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,7 +14,7 @@ return new class extends Migration
             $table->string('codigo_org', 20)->unique();
             $table->string('codigo_siga', 50)->nullable();
             $table->string('nombre', 200);
-            $table->enum('tipo', ['gerencia', 'unidad', 'comite']);
+            $table->enum('tipo', ['politico', 'ejecutivo', 'gerencia', 'unidad', 'comite']);
             $table->boolean('permite_derivacion')->default(false);
             $table->unsignedBigInteger('gerencia_id')->nullable();
             $table->unsignedBigInteger('padre_id')->nullable();
@@ -97,9 +98,20 @@ return new class extends Migration
             $table->string('nombre', 150);
             $table->string('prefijo_numeracion', 20);
             $table->string('formato_display', 50)->default('{prefijo}-{anio}-{secuencial}');
+            $table->enum('clase_norma', ['acuerdo', 'decreto', 'ordenanza', 'resolucion', 'directiva', 'gestion_interna', 'otro'])->default('otro');
+            $table->enum('ambito_emision', ['concejo', 'alcaldia', 'gerencia_municipal', 'gerencia', 'sub_gerencia', 'unidad'])->default('unidad');
+            $table->foreignId('unidad_emisora_id')->nullable()->constrained('unidades_organizacionales');
+            $table->boolean('registro_por_secretaria')->default(false);
             $table->boolean('requiere_firma_antes_derivar')->default(true);
+            $table->boolean('requiere_recepcion')->default(true);
             $table->boolean('activo')->default(true);
             $table->timestamps();
+        });
+
+        Schema::create('tipo_documental_unidades_registro', function (Blueprint $table) {
+            $table->foreignId('tipo_documental_id')->constrained('tipos_documentales')->cascadeOnDelete();
+            $table->foreignId('unidad_id')->constrained('unidades_organizacionales')->cascadeOnDelete();
+            $table->primary(['tipo_documental_id', 'unidad_id']);
         });
 
         Schema::create('numeraciones_expediente', function (Blueprint $table) {
@@ -110,21 +122,35 @@ return new class extends Migration
             $table->unique(['tipo_documental_id', 'anio']);
         });
 
+        Schema::create('sellos_institucionales', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('unidad_id')->nullable()->constrained('unidades_organizacionales');
+            $table->string('nombre', 150);
+            $table->string('imagen_path', 500);
+            $table->boolean('activo')->default(true);
+            $table->date('vigente_desde')->nullable();
+            $table->date('vigente_hasta')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('expedientes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tipo_documental_id')->constrained('tipos_documentales');
             $table->smallInteger('anio');
             $table->integer('secuencial');
-            $table->string('codigo', 50)->index();
+            $table->string('codigo', 50)->unique();
             $table->string('asunto', 500);
             $table->enum('prioridad', ['baja', 'media', 'alta', 'urgente'])->default('media');
             $table->foreignId('unidad_origen_id')->constrained('unidades_organizacionales');
             $table->foreignId('unidad_actual_id')->constrained('unidades_organizacionales');
-            $table->enum('estado', ['registrado', 'en_tramite', 'archivado'])->default('registrado');
+            $table->enum('estado', ['registrado', 'por_recepcionar', 'en_tramite', 'devuelto', 'archivado'])->default('registrado');
+            $table->unsignedBigInteger('documento_principal_id')->nullable();
             $table->foreignId('registrado_por')->constrained('usuarios');
+            $table->foreignId('archivado_por')->nullable()->constrained('usuarios');
+            $table->timestamp('archivado_at')->nullable();
             $table->timestamps();
             $table->unique(['tipo_documental_id', 'anio', 'secuencial']);
-            $table->index(['unidad_actual_id', 'estado']);
+            $table->index(['unidad_actual_id', 'estado', 'prioridad']);
         });
 
         Schema::create('documentos', function (Blueprint $table) {
@@ -132,17 +158,25 @@ return new class extends Migration
             $table->foreignId('expediente_id')->constrained('expedientes')->cascadeOnDelete();
             $table->smallInteger('version')->default(1);
             $table->string('titulo', 300);
+            $table->boolean('es_principal')->default(false);
+            $table->foreignId('documento_anterior_id')->nullable()->constrained('documentos');
             $table->string('archivo_path', 500)->nullable();
             $table->string('hash_contenido', 64)->nullable();
             $table->enum('estado', ['borrador', 'pendiente_firma', 'firmado'])->default('borrador');
             $table->foreignId('creado_por')->constrained('usuarios');
             $table->timestamps();
+            $table->index(['expediente_id', 'es_principal']);
+        });
+
+        Schema::table('expedientes', function (Blueprint $table) {
+            $table->foreign('documento_principal_id')->references('id')->on('documentos');
         });
 
         Schema::create('documento_firmas', function (Blueprint $table) {
             $table->id();
             $table->foreignId('documento_id')->unique()->constrained('documentos')->cascadeOnDelete();
             $table->foreignId('usuario_id')->constrained('usuarios');
+            $table->foreignId('unidad_id')->constrained('unidades_organizacionales');
             $table->string('firma_hash', 128);
             $table->json('firma_metadata')->nullable();
             $table->timestamp('firmado_at')->useCurrent();
@@ -151,6 +185,7 @@ return new class extends Migration
         Schema::create('documento_sellos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('documento_id')->unique()->constrained('documentos')->cascadeOnDelete();
+            $table->foreignId('sello_institucional_id')->nullable()->constrained('sellos_institucionales');
             $table->string('sello_imagen_path', 500);
             $table->json('sello_metadata')->nullable();
             $table->timestamp('aplicado_at')->useCurrent();
@@ -159,12 +194,31 @@ return new class extends Migration
         Schema::create('expediente_movimientos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('expediente_id')->constrained('expedientes')->cascadeOnDelete();
-            $table->enum('tipo_movimiento', ['registro', 'derivacion', 'devolucion']);
+            $table->enum('tipo_movimiento', ['registro', 'recepcion', 'derivacion', 'devolucion']);
             $table->foreignId('unidad_origen_id')->nullable()->constrained('unidades_organizacionales');
             $table->foreignId('unidad_destino_id')->nullable()->constrained('unidades_organizacionales');
+            $table->foreignId('unidad_actuante_id')->constrained('unidades_organizacionales');
             $table->foreignId('usuario_id')->constrained('usuarios');
             $table->text('observacion')->nullable();
             $table->text('proveido')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->index(['expediente_id', 'created_at']);
+        });
+
+        Schema::create('tramite_constancias', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('expediente_movimiento_id')->unique()->constrained('expediente_movimientos')->cascadeOnDelete();
+            $table->foreignId('documento_id')->nullable()->constrained('documentos');
+            $table->foreignId('usuario_id')->constrained('usuarios');
+            $table->foreignId('unidad_id')->constrained('unidades_organizacionales');
+            $table->enum('tipo_acto', ['recepcion', 'proveido_salida', 'devolucion', 'firma_documento']);
+            $table->string('firma_hash', 128);
+            $table->json('firma_metadata')->nullable();
+            $table->foreignId('sello_institucional_id')->nullable()->constrained('sellos_institucionales');
+            $table->string('sello_imagen_path', 500)->nullable();
+            $table->string('sello_texto', 500)->nullable();
+            $table->string('pdf_resultante_path', 500)->nullable();
+            $table->json('sello_metadata')->nullable();
             $table->timestamp('created_at')->useCurrent();
         });
 
@@ -175,6 +229,7 @@ return new class extends Migration
             $table->string('path', 500);
             $table->string('mime_type', 100);
             $table->unsignedBigInteger('tamano_bytes');
+            $table->string('hash_archivo', 64)->nullable();
             $table->foreignId('subido_por')->constrained('usuarios');
             $table->timestamp('created_at')->useCurrent();
         });
@@ -269,6 +324,18 @@ return new class extends Migration
             $table->timestamp('ejecutado_at')->useCurrent();
         });
 
+        Schema::create('sync_log_detalles', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('sync_log_id')->constrained('sync_logs')->cascadeOnDelete();
+            $table->string('entidad_externa', 50);
+            $table->string('referencia', 100)->nullable();
+            $table->string('entidad_local', 50)->nullable();
+            $table->unsignedBigInteger('entidad_local_id')->nullable();
+            $table->enum('estado', ['ok', 'error', 'omitido']);
+            $table->text('mensaje')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+        });
+
         Schema::create('siaf_ejecucion_snapshots', function (Blueprint $table) {
             $table->id();
             $table->string('periodo', 20);
@@ -279,11 +346,21 @@ return new class extends Migration
             $table->boolean('es_simulacion')->default(false);
             $table->timestamp('sincronizado_at')->useCurrent();
         });
+
+        $this->seedRolesAndPermisos();
+        $this->createViews();
     }
 
     public function down(): void
     {
+        DB::statement('DROP VIEW IF EXISTS v_equipos_utis');
+        DB::statement('DROP VIEW IF EXISTS v_equipos_riesgo');
+        DB::statement('DROP VIEW IF EXISTS v_dashboard_tramitacion');
+        DB::statement('DROP VIEW IF EXISTS v_expediente_timeline');
+        DB::statement('DROP VIEW IF EXISTS v_bandeja_pendientes');
+
         Schema::dropIfExists('siaf_ejecucion_snapshots');
+        Schema::dropIfExists('sync_log_detalles');
         Schema::dropIfExists('sync_logs');
         Schema::dropIfExists('ml_predicciones');
         Schema::dropIfExists('ml_modelos');
@@ -292,12 +369,15 @@ return new class extends Migration
         Schema::dropIfExists('fichas_tecnicas');
         Schema::dropIfExists('equipos');
         Schema::dropIfExists('expediente_adjuntos');
+        Schema::dropIfExists('tramite_constancias');
         Schema::dropIfExists('expediente_movimientos');
         Schema::dropIfExists('documento_sellos');
         Schema::dropIfExists('documento_firmas');
         Schema::dropIfExists('documentos');
         Schema::dropIfExists('expedientes');
+        Schema::dropIfExists('sellos_institucionales');
         Schema::dropIfExists('numeraciones_expediente');
+        Schema::dropIfExists('tipo_documental_unidades_registro');
         Schema::dropIfExists('tipos_documentales');
         Schema::dropIfExists('auditoria_logs');
         Schema::dropIfExists('usuario_traslados');
@@ -307,5 +387,101 @@ return new class extends Migration
         Schema::dropIfExists('roles');
         Schema::dropIfExists('usuarios');
         Schema::dropIfExists('unidades_organizacionales');
+    }
+
+    private function seedRolesAndPermisos(): void
+    {
+        $roles = [
+            ['ADMIN_SISTEMA', 'Administrador del sistema (UTIS)'],
+            ['VISTA_EJECUTIVA', 'Vista ejecutiva (Alcaldía / Gerencia Municipal)'],
+            ['GERENTE', 'Gerente de línea'],
+            ['PATRIMONIO', 'Unidad de Patrimonio'],
+            ['UTIS_SOPORTE', 'Soporte TI (UTIS)'],
+            ['FINANZAS_SIAF', 'Acceso dashboard SIAF'],
+            ['SECRETARIA_GENERAL', 'Secretaría General'],
+            ['SUPERVISOR_UNIDAD', 'Supervisor de unidad'],
+            ['OPERADOR', 'Operador'],
+            ['AUDITOR_OCI', 'Auditor OCI'],
+        ];
+
+        foreach ($roles as [$codigo, $nombre]) {
+            DB::table('roles')->insert(['codigo' => $codigo, 'nombre' => $nombre]);
+        }
+
+        $permisos = [
+            ['core.usuarios.gestionar', 'NUCLEO', 'Gestionar usuarios y roles'],
+            ['core.auditoria.consultar', 'NUCLEO', 'Consultar auditoría'],
+            ['doc.expediente.registrar', 'MOD-DOC', 'Registrar expedientes'],
+            ['doc.expediente.consultar', 'MOD-DOC', 'Consultar expedientes'],
+            ['doc.expediente.derivar', 'MOD-DOC', 'Derivar expedientes'],
+            ['doc.expediente.devolver', 'MOD-DOC', 'Devolver expedientes'],
+            ['doc.expediente.recepcionar', 'MOD-DOC', 'Recepcionar expedientes'],
+            ['doc.expediente.archivar', 'MOD-DOC', 'Archivar expedientes'],
+            ['doc.documento.firmar', 'MOD-DOC', 'Firmar y sellar documentos'],
+            ['doc.tipos.gestionar', 'MOD-DOC', 'Administrar tipos documentales'],
+            ['pat.equipo.registrar', 'MOD-PAT-TI', 'Registrar equipos'],
+            ['pat.equipo.consultar', 'MOD-PAT-TI', 'Consultar equipos'],
+            ['pat.ficha.gestionar', 'MOD-PAT-TI', 'Gestionar fichas'],
+            ['pat.incidencia.gestionar', 'MOD-PAT-TI', 'Gestionar incidencias'],
+            ['dash.tramitacion.ver', 'MOD-DASH', 'Ver dashboard tramitación'],
+            ['dash.estrategico.ver', 'MOD-DASH', 'Ver dashboard estratégico'],
+            ['dash.siaf.ver', 'MOD-DASH', 'Ver datos SIAF'],
+            ['int.sync.ejecutar', 'INT', 'Ejecutar sincronizaciones'],
+        ];
+
+        foreach ($permisos as [$codigo, $modulo, $descripcion]) {
+            DB::table('permisos')->insert([
+                'codigo' => $codigo,
+                'modulo' => $modulo,
+                'descripcion' => $descripcion,
+            ]);
+        }
+
+        $adminId = DB::table('roles')->where('codigo', 'ADMIN_SISTEMA')->value('id');
+        if ($adminId) {
+            foreach (DB::table('permisos')->pluck('id') as $permisoId) {
+                DB::table('role_permiso')->insertOrIgnore([
+                    'role_id' => $adminId,
+                    'permiso_id' => $permisoId,
+                ]);
+            }
+        }
+    }
+
+    private function createViews(): void
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            return;
+        }
+
+        DB::statement("
+            CREATE OR REPLACE VIEW v_bandeja_pendientes AS
+            SELECT e.id, e.codigo, e.asunto, e.prioridad, e.estado,
+                   e.unidad_actual_id, e.unidad_origen_id, e.tipo_documental_id,
+                   td.codigo AS tipo_codigo, td.nombre AS tipo_nombre,
+                   ua.nombre AS unidad_actual_nombre, e.created_at, e.updated_at
+            FROM expedientes e
+            INNER JOIN tipos_documentales td ON td.id = e.tipo_documental_id
+            INNER JOIN unidades_organizacionales ua ON ua.id = e.unidad_actual_id
+            WHERE e.estado IN ('por_recepcionar', 'en_tramite', 'devuelto', 'registrado')
+        ");
+
+        DB::statement("
+            CREATE OR REPLACE VIEW v_dashboard_tramitacion AS
+            SELECT e.unidad_actual_id, u.nombre AS unidad_nombre, e.estado,
+                   COUNT(*) AS total_expedientes
+            FROM expedientes e
+            INNER JOIN unidades_organizacionales u ON u.id = e.unidad_actual_id
+            WHERE e.estado <> 'archivado'
+            GROUP BY e.unidad_actual_id, u.nombre, e.estado
+        ");
+
+        DB::statement("
+            CREATE OR REPLACE VIEW v_equipos_utis AS
+            SELECT id, codigo_patrimonial, tipo_equipo, marca, modelo, numero_serie,
+                   estado_operativo, unidad_id, custodio_nombre, custodio_cargo,
+                   fecha_adquisicion, created_at, updated_at
+            FROM equipos WHERE estado_operativo <> 'baja'
+        ");
     }
 };

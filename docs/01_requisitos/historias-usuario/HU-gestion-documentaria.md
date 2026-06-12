@@ -3,7 +3,7 @@
 **Módulo:** MOD-DOC  
 **Proceso:** S.01 — Gestión documentaria y comunicaciones  
 **Unidad principal:** Secretaría General / Trámite Documentario (ORG-048)  
-**Versión:** 1.1
+**Versión:** 1.3
 
 ---
 
@@ -65,17 +65,27 @@ Feature: Registro de expedientes
 ```gherkin
 Feature: Derivación y devolución
 
-  Scenario: Derivación a gerencia real
-    Dado expediente en mi bandeja
-    Cuando derivo a unidad de gerencia real del organigrama
-    Y ingreso proveído u observación
-    Entonces expediente aparece en bandeja del destino
-    Y se registra movimiento en historial
+  Scenario: Derivación libre a unidad del organigrama
+    Dado expediente en bandeja de mi unidad activa
+    Cuando derivo eligiendo cualquier unidad activa del organigrama
+    Y opcionalmente ingreso proveído u observación
+    Entonces expediente aparece en bandeja de la unidad destino
+    Y unidad_actual del expediente es la unidad destino
+    Y se registra movimiento "derivación" en historial
 
-  Scenario: Devolución con observaciones
-    Dado expediente recibido de unidad anterior
+  Scenario: Cadena multietapa entre unidades
+    Dado expediente en Presupuesto
+    Cuando Presupuesto deriva a Almacén
+    Y Almacén deriva a Administración
+    Y Administración deriva a Logística
+    Entonces historial muestra tres derivaciones con unidades y timestamps
+    Y cada unidad solo ve el expediente cuando es unidad_actual
+
+  Scenario: Devolución automática con observaciones
+    Dado expediente recibido en mi unidad por derivación de otra unidad
     Cuando devuelvo con observaciones obligatorias
-    Entonces expediente regresa a bandeja de unidad anterior
+    Entonces expediente regresa automáticamente a bandeja del remitente inmediato
+    Y el operador no elige unidad destino de devolución
     Y historial muestra acción "devolución" con observación
 
   Scenario: Devolución sin observación
@@ -85,9 +95,14 @@ Feature: Derivación y devolución
   Scenario: Derivación a unidad inactiva
     Cuando destino es unidad inactiva
     Entonces operación rechazada
+
+  Scenario: Sin estado rechazado en Fase 1
+    Dado expediente en cualquier unidad
+    Cuando consulto acciones disponibles
+    Entonces no existe acción "rechazar" en interfaz
 ```
 
-**Decisiones:** PA-05, PA-10
+**Decisiones:** PA-05, PA-10, PA-24, PA-25, PA-26, PA-27
 
 ---
 
@@ -237,9 +252,30 @@ Feature: Tipos documentales
     Dado tipo marcado inactivo
     Cuando operador registra expediente
     Entonces tipo no aparece en selector
+
+  Scenario: Tipos filtrados por área emisora
+    Dado operador de Gerencia de Planeamiento y Presupuesto (ORG-021)
+    Cuando abre registro de expediente
+    Entonces ve tipos cuya unidad emisora es ORG-021 o su sub unidad
+    Y no ve tipos exclusivos de otra gerencia (ej. RGDES de Desarrollo Económico)
+
+  Scenario: Secretaría registra acto de Alcaldía o Concejo
+    Dado tipo "Decreto de Alcaldía" con registro_por_secretaria
+    Y usuario con rol SECRETARIA_GENERAL
+    Cuando registra expediente de ese tipo
+    Entonces unidad_origen es Alcaldía (ORG-002)
+    Y numeración usa prefijo del tipo y año vigente
+
+  Scenario: Catálogo normas legales institucional
+    Dado listado de normas (acuerdos, decretos, resoluciones, ordenanzas)
+    Cuando Secretaría General carga catálogo inicial
+    Entonces cada tipo tiene clase_norma, ambito_emision y unidad_emisora
+    Y documentación en catalogo-tipos-normas-documentales.md
 ```
 
-**Decisiones:** PA-07, PA-09
+**Decisiones:** PA-07, PA-09, PA-29
+
+**Catálogo:** [catalogo-tipos-normas-documentales.md](../catalogo-tipos-normas-documentales.md)
 
 ---
 
