@@ -5,12 +5,18 @@ namespace App\Services\Patrimonio;
 use App\Models\Equipo;
 use App\Models\MlModelo;
 use App\Models\MlPrediccion;
+use App\Models\Usuario;
+use App\Services\Core\AuditoriaService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class MlPredictionService
 {
-    public function __construct(private MlFeatureService $featureService) {}
+    public function __construct(
+        private MlFeatureService $featureService,
+        private AuditoriaService $auditoria,
+    ) {}
 
     public function ejecutarBatch(): array
     {
@@ -18,6 +24,9 @@ class MlPredictionService
         $equipos = Equipo::query()->where('estado_operativo', '!=', 'baja')->get();
         $procesados = 0;
         $omitidos = 0;
+
+        /** @var Collection<int, array{equipo: Equipo, features: array<string, mixed>}> $pendientes */
+        $pendientes = collect();
 
         foreach ($equipos as $equipo) {
             $features = $this->featureService->forEquipo($equipo);
@@ -27,7 +36,15 @@ class MlPredictionService
                 continue;
             }
 
-            $probabilidad = $this->predecirProbabilidad($equipo->id, $features);
+            $pendientes->push(['equipo' => $equipo, 'features' => $features]);
+        }
+
+        $probabilidades = $this->predecirBatch($pendientes);
+
+        foreach ($pendientes as $item) {
+            $equipo = $item['equipo'];
+            $features = $item['features'];
+            $probabilidad = $probabilidades[$equipo->id] ?? $this->simularRandomForest($features);
             $nivel = $this->nivelRiesgo($probabilidad);
 
             MlPrediccion::create([
@@ -41,11 +58,23 @@ class MlPredictionService
             $procesados++;
         }
 
-        return [
+        $resultado = [
             'procesados' => $procesados,
             'omitidos' => $omitidos,
             'modelo_version' => $modelo->version,
+            'modo' => config('sgmi.ml.service_url') ? 'fastapi' : 'simulado',
         ];
+
+        $this->auditoria->registrar(
+            'MOD-PAT-TI',
+            'ml_ejecutar_batch',
+            'ml_modelo',
+            $modelo->id,
+            $resultado,
+            Usuario::where('username', 'admin.utis')->first(),
+        );
+
+        return $resultado;
     }
 
     public function resumenSemaforo(): array
@@ -87,30 +116,59 @@ class MlPredictionService
         );
     }
 
-    /** @param array<string, mixed> $features */
-    private function predecirProbabilidad(int $equipoId, array $features): float
+    /**
+     * @param Collection<int, array{equipo: Equipo, features: array<string, mixed>}> $pendientes
+     * @return array<int, float>
+     */
+    private function predecirBatch(Collection $pendientes): array
     {
         $url = config('sgmi.ml.service_url');
-
-        if ($url) {
-            try {
-                $response = Http::timeout(30)->post(rtrim($url, '/').'/predict/batch', [
-                    'model_version' => config('sgmi.ml.modelo_version'),
-                    'equipos' => [['id' => $equipoId, 'features' => $features]],
-                ]);
-
-                if ($response->successful()) {
-                    $pred = collect($response->json('predicciones'))->firstWhere('equipo_id', $equipoId);
-                    if ($pred && isset($pred['probabilidad'])) {
-                        return min(0.99, max(0.01, (float) $pred['probabilidad']));
-                    }
-                }
-            } catch (\Throwable $e) {
-                Log::warning('ML service fallback: '.$e->getMessage());
-            }
+        if (! $url || $pendientes->isEmpty()) {
+            return [];
         }
 
-        return $this->simularRandomForest($features);
+        try {
+            $payload = [
+                'model_version' => config('sgmi.ml.modelo_version'),
+                'equipos' => $pendientes->map(fn ($item) => [
+                    'id' => $item['equipo']->id,
+                    'features' => $item['features'],
+                ])->values()->all(),
+            ];
+
+            $response = $this->httpClient()->post(rtrim($url, '/').'/predict/batch', $payload);
+
+            if ($response->failed()) {
+                Log::warning('ML service batch error: '.$response->body());
+
+                return [];
+            }
+
+            $map = [];
+            foreach ($response->json('predicciones') ?? [] as $pred) {
+                if (isset($pred['equipo_id'], $pred['probabilidad'])) {
+                    $map[(int) $pred['equipo_id']] = min(0.99, max(0.01, (float) $pred['probabilidad']));
+                }
+            }
+
+            return $map;
+        } catch (\Throwable $e) {
+            Log::warning('ML service fallback: '.$e->getMessage());
+
+            return [];
+        }
+    }
+
+    private function httpClient()
+    {
+        $request = Http::timeout((int) config('sgmi.ml.timeout', 60))->acceptJson();
+        $token = config('sgmi.ml.api_token');
+
+        if ($token) {
+            $request = $request->withToken($token);
+        }
+
+        return $request;
     }
 
     /** Simulación ponderada de features (desarrollo sin FastAPI). */

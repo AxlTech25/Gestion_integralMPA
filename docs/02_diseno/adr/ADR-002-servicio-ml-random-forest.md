@@ -83,6 +83,7 @@ Comunicación solo red interna; sin exposición pública.
 
 ## Verificación
 
-- [ ] FastAPI responde `/health`
-- [ ] Train + predict batch con dataset fixture
-- [ ] Laravel Job persiste `ml_predicciones` correctamente
+- [x] FastAPI responde `/health`
+- [x] Train + predict batch con dataset fixture (`ml-service/`)
+- [x] Laravel Job persiste `ml_predicciones` correctamente
+- [x] Despliegue Railway documentado en `ml-service/README.md`

@@ -40,6 +40,10 @@ Detalle completo: [docs/03_implementacion/SETUP.md](docs/03_implementacion/SETUP
 
 - [SETUP Sprint 1](docs/03_implementacion/SETUP.md)
 
+### Calidad (ISO 9001)
+
+- [Sistema de Gestión de la Calidad (SGC)](docs/ISO/README.md)
+
 ---
 
 ## Estructura del proyecto

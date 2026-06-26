@@ -55,8 +55,16 @@ class DashboardService
             ? $this->siafResumen()
             : null;
 
+        $tramitacion = $usuario->hasPermiso('dash.tramitacion.ver')
+            ? [
+                'por_unidad' => $this->tramitacionPorUnidad($usuario, $dias)->values()->all(),
+                'por_gerencia' => $this->tramitacionPorGerencia($usuario, $dias)->values()->all(),
+            ]
+            : null;
+
         return [
             'periodo_dias' => $dias,
+            'alcance' => $this->alcanceLabel($usuario),
             'kpis' => [
                 'pendientes' => $pendientes,
                 'urgentes' => $urgentes,
@@ -66,13 +74,14 @@ class DashboardService
             ],
             'actividad_reciente' => $actividad,
             'siaf' => $siaf,
+            'tramitacion' => $tramitacion,
         ];
     }
 
     public function estrategico(Usuario $usuario, int $dias = 30): array
     {
         $desde = now()->subDays($dias);
-        $query = Expediente::query()->where('estado', '!=', 'archivado');
+        $query = $this->expedientesInstitucionales($usuario);
 
         $pendientes = (clone $query)
             ->whereIn('estado', ['registrado', 'por_recepcionar', 'en_tramite', 'devuelto'])
@@ -93,6 +102,7 @@ class DashboardService
 
         return [
             'periodo_dias' => $dias,
+            'alcance' => $this->alcanceLabel($usuario),
             'kpis' => [
                 'expedientes_pendientes' => $pendientes,
                 'tramitados_hoy' => $tramitadosHoy,
@@ -102,9 +112,45 @@ class DashboardService
             'tramitacion_gerencias' => $this->tramitacionPorGerencia($usuario, $dias),
             'semaforo_ti' => $this->semaforoTi(),
             'alertas_ti' => $this->alertasTi(),
-            'sugerencia' => $this->sugerenciaEstrategica(),
+            'sugerencia' => $this->sugerenciaEstrategica($usuario),
             'siaf' => $usuario->hasPermiso('dash.siaf.ver') ? $this->siafResumen() : null,
         ];
+    }
+
+    /** @return Collection<int, array<string, mixed>> */
+    public function tramitacionPorUnidad(Usuario $usuario, int $dias = 30): Collection
+    {
+        $desde = now()->subDays($dias);
+        $base = $this->expedientesInstitucionales($usuario)
+            ->whereIn('expedientes.estado', ['registrado', 'por_recepcionar', 'en_tramite', 'devuelto'])
+            ->where('expedientes.updated_at', '>=', $desde);
+
+        $pendientes = (clone $base)
+            ->join('unidades_organizacionales as ua', 'expedientes.unidad_actual_id', '=', 'ua.id')
+            ->selectRaw('ua.id as unidad_id, ua.nombre as unidad, COUNT(*) as pendientes')
+            ->groupBy('ua.id', 'ua.nombre')
+            ->orderByDesc('pendientes')
+            ->limit(8)
+            ->get();
+
+        $promedios = (clone $base)
+            ->get(['unidad_actual_id', 'created_at'])
+            ->groupBy('unidad_actual_id')
+            ->map(fn ($grupo) => round($grupo->avg(fn ($e) => $e->created_at->diffInDays(now())), 1));
+
+        $max = max(1, $pendientes->max('pendientes') ?? 1);
+        $barClasses = ['bg-primary', 'bg-secondary', 'bg-primary/60', 'bg-secondary/70', 'bg-tertiary', 'bg-primary/40'];
+
+        return $pendientes->map(function ($row, $idx) use ($max, $promedios, $barClasses) {
+            return [
+                'unidad_id' => (int) $row->unidad_id,
+                'nombre' => $this->abreviarUnidad($row->unidad),
+                'pendientes' => (int) $row->pendientes,
+                'promedio_dias' => (float) ($promedios[$row->unidad_id] ?? 0),
+                'heightPct' => (int) round(($row->pendientes / $max) * 100),
+                'barClass' => $barClasses[$idx % count($barClasses)],
+            ];
+        });
     }
 
     /** @return Collection<int, array<string, mixed>> */
@@ -112,11 +158,13 @@ class DashboardService
     {
         $desde = now()->subDays($dias);
 
-        $rows = Expediente::query()
+        $query = $this->expedientesInstitucionales($usuario)
             ->join('unidades_organizacionales as ua', 'expedientes.unidad_actual_id', '=', 'ua.id')
             ->leftJoin('unidades_organizacionales as g', 'ua.gerencia_id', '=', 'g.id')
             ->where('expedientes.estado', '!=', 'archivado')
-            ->where('expedientes.updated_at', '>=', $desde)
+            ->where('expedientes.updated_at', '>=', $desde);
+
+        $rows = $query
             ->selectRaw('COALESCE(g.nombre, ua.nombre) as gerencia, COUNT(*) as total')
             ->groupBy('g.id', 'g.nombre', 'ua.nombre')
             ->orderByDesc('total')
@@ -141,13 +189,22 @@ class DashboardService
     public function alertasTi(): array
     {
         $predicciones = MlPrediccion::query()
+            ->select('ml_predicciones.*')
             ->with(['equipo.unidad.gerencia'])
+            ->joinSub(
+                MlPrediccion::query()
+                    ->selectRaw('equipo_id, MAX(calculado_at) as max_calc')
+                    ->groupBy('equipo_id'),
+                'ult',
+                function ($join) {
+                    $join->on('ml_predicciones.equipo_id', '=', 'ult.equipo_id')
+                        ->on('ml_predicciones.calculado_at', '=', 'ult.max_calc');
+                }
+            )
             ->whereIn('nivel_riesgo', ['rojo', 'amarillo'])
             ->orderByDesc('probabilidad_falla')
             ->limit(8)
-            ->get()
-            ->unique('equipo_id')
-            ->values();
+            ->get();
 
         return $predicciones->map(function (MlPrediccion $p) {
             $equipo = $p->equipo;
@@ -227,10 +284,33 @@ class DashboardService
         return $query->whereIn('unidad_actual_id', $unidadIds);
     }
 
+    private function expedientesInstitucionales(Usuario $usuario)
+    {
+        if ($this->vistaInstitucional($usuario)) {
+            return Expediente::query();
+        }
+
+        return $this->expedientesBase($usuario);
+    }
+
     private function vistaInstitucional(Usuario $usuario): bool
     {
-        return $usuario->hasPermiso('dash.estrategico.ver')
+        return $usuario->hasRole('VISTA_EJECUTIVA')
+            || $usuario->hasRole('ADMIN_SISTEMA')
             || $usuario->hasPermiso('core.usuarios.gestionar');
+    }
+
+    private function alcanceLabel(Usuario $usuario): string
+    {
+        if ($this->vistaInstitucional($usuario)) {
+            return 'institucional';
+        }
+
+        $usuario->loadMissing('unidadActiva.gerencia');
+
+        return $usuario->unidadActiva?->gerencia?->nombre
+            ?? $usuario->unidadActiva?->nombre
+            ?? 'unidad';
     }
 
     /** @return Collection<int, int> */
@@ -284,7 +364,7 @@ class DashboardService
         return $diff >= 0 ? "+{$pct}% vs. ayer" : "{$pct}% vs. ayer";
     }
 
-    private function sugerenciaEstrategica(): array
+    private function sugerenciaEstrategica(?Usuario $usuario = null): array
     {
         $critico = $this->alertasTi();
         $top = $critico[0] ?? null;
@@ -297,7 +377,11 @@ class DashboardService
             ];
         }
 
-        $gerenciaTop = Expediente::query()
+        $gerenciaQuery = $usuario
+            ? $this->expedientesInstitucionales($usuario)
+            : Expediente::query();
+
+        $gerenciaTop = $gerenciaQuery
             ->join('unidades_organizacionales as ua', 'expedientes.unidad_actual_id', '=', 'ua.id')
             ->leftJoin('unidades_organizacionales as g', 'ua.gerencia_id', '=', 'g.id')
             ->where('expedientes.estado', '!=', 'archivado')
@@ -334,5 +418,19 @@ class DashboardService
         ];
 
         return $map[$nombre] ?? (strlen($nombre) > 22 ? substr($nombre, 0, 20).'…' : $nombre);
+    }
+
+    private function abreviarUnidad(string $nombre): string
+    {
+        $map = [
+            'Unidad de Tecnología de la Información y Sistemas (UTIS)' => 'UTIS',
+            'Unidad de Trámite Documentario y Archivo' => 'Trámite Documentario',
+            'Unidad de Presupuesto' => 'Presupuesto',
+            'Unidad de Tesorería' => 'Tesorería',
+            'Unidad de Contabilidad' => 'Contabilidad',
+            'Unidad de Patrimonio' => 'Patrimonio',
+        ];
+
+        return $map[$nombre] ?? (strlen($nombre) > 24 ? substr($nombre, 0, 22).'…' : $nombre);
     }
 }

@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests\Patrimonio;
 
+use App\Models\Usuario;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreIncidenciaRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+
+        return $user instanceof Usuario
+            && $user->hasAnyPermiso(['pat.incidencia.reportar', 'pat.incidencia.gestionar']);
     }
 
     public function rules(): array

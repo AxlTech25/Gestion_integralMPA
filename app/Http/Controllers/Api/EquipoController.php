@@ -9,6 +9,7 @@ use App\Models\Equipo;
 use App\Models\Usuario;
 use App\Services\Patrimonio\EquipoService;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class EquipoController extends Controller
 {
@@ -91,6 +92,49 @@ class EquipoController extends Controller
         $equipo = $this->equipoService->actualizar($equipo, $request->user(), $request->validated());
 
         return response()->json($this->formatEquipo($equipo, true));
+    }
+
+    public function buscarSoporte(Request $request)
+    {
+        $usuario = $request->user();
+        if (! $usuario instanceof Usuario) {
+            return response()->json([], Response::HTTP_UNAUTHORIZED);
+        }
+
+        if (! $usuario->hasAnyPermiso(['pat.incidencia.reportar', 'pat.incidencia.gestionar', 'pat.equipo.consultar'])) {
+            return response()->json(['message' => 'No tiene permiso.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $q = trim((string) $request->input('q', ''));
+        if (strlen($q) < 2) {
+            return response()->json([]);
+        }
+
+        $query = Equipo::query()
+            ->where('estado_operativo', '!=', 'baja')
+            ->where(function ($inner) use ($q) {
+                $inner->where('codigo_patrimonial', 'like', "%{$q}%")
+                    ->orWhere('marca', 'like', "%{$q}%")
+                    ->orWhere('modelo', 'like', "%{$q}%");
+            });
+
+        if (
+            $usuario->hasPermiso('pat.incidencia.reportar')
+            && ! $usuario->hasPermiso('pat.incidencia.gestionar')
+            && ! $usuario->hasPermiso('pat.equipo.consultar')
+        ) {
+            $query->where('unidad_id', $usuario->unidad_activa_id);
+        }
+
+        $equipos = $query->orderBy('codigo_patrimonial')->limit(10)->get();
+
+        return response()->json($equipos->map(fn ($e) => [
+            'id' => $e->id,
+            'codigo_patrimonial' => $e->codigo_patrimonial,
+            'marca' => $e->marca,
+            'modelo' => $e->modelo,
+            'label' => trim("{$e->codigo_patrimonial} — {$e->marca} {$e->modelo}"),
+        ]));
     }
 
     private function formatEquipo(Equipo $e, bool $vistaCompleta): array

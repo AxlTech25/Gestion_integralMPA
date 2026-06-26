@@ -5,6 +5,9 @@
         <h1 class="text-headline-xl text-on-surface font-bold">Panel de Control</h1>
         <p class="text-body-lg text-on-surface-variant">
           Vista general del estado operativo de la Municipalidad de Acobamba.
+          <span v-if="alcanceLabel" class="block text-label-md mt-1 text-primary font-semibold">
+            Alcance: {{ alcanceLabel }}
+          </span>
         </p>
       </div>
       <div class="flex gap-2">
@@ -36,6 +39,18 @@
           :icon="kpi.icon"
           :icon-class="kpi.iconClass"
           :trend="kpi.trend"
+        />
+      </section>
+
+      <section
+        v-if="tramitacion?.por_unidad?.length"
+        class="grid grid-cols-1 lg:grid-cols-2 gap-gutter"
+        aria-label="Tramitación por unidad"
+      >
+        <UnidadTramitacionChart :unidades="tramitacion.por_unidad" />
+        <GerenciaBarChart
+          v-if="tramitacion?.por_gerencia?.length"
+          :gerencias="tramitacion.por_gerencia"
         />
       </section>
 
@@ -130,6 +145,8 @@ import { useAuthStore } from '../stores/auth';
 import { abreviarUnidad } from '../utils/estadoDocumento';
 import KpiCard from '../components/dashboard/KpiCard.vue';
 import EstadoBadge from '../components/dashboard/EstadoBadge.vue';
+import UnidadTramitacionChart from '../components/dashboard/UnidadTramitacionChart.vue';
+import GerenciaBarChart from '../components/dashboard/GerenciaBarChart.vue';
 
 const dashStore = useDashboardStore();
 const auth = useAuthStore();
@@ -137,7 +154,7 @@ const router = useRouter();
 const periodo = ref(30);
 
 onMounted(() => {
-    if (auth.can('doc.expediente.consultar')) {
+    if (auth.can('doc.expediente.consultar') || auth.can('dash.tramitacion.ver')) {
         recargar();
     }
 });
@@ -149,6 +166,13 @@ function recargar() {
 const kpis = computed(() => dashStore.operativo?.kpis ?? {});
 const actividadReciente = computed(() => dashStore.operativo?.actividad_reciente ?? []);
 const siaf = computed(() => dashStore.operativo?.siaf);
+const tramitacion = computed(() => dashStore.operativo?.tramitacion);
+const alcanceLabel = computed(() => {
+    const a = dashStore.operativo?.alcance;
+    if (!a) return '';
+    if (a === 'institucional') return 'Institucional';
+    return a.length > 48 ? a.slice(0, 46) + '…' : a;
+});
 
 const kpiCards = computed(() => [
     {

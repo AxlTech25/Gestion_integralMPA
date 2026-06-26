@@ -9,12 +9,16 @@ use App\Http\Requests\Documentaria\StoreExpedienteRequest;
 use App\Models\Expediente;
 use App\Models\Usuario;
 use App\Services\Core\AccesoService;
+use App\Services\Documentaria\ExpedienteHistorialService;
 use App\Services\Documentaria\ExpedienteService;
 use Illuminate\Http\Request;
 
 class ExpedienteController extends Controller
 {
-    public function __construct(private ExpedienteService $expedienteService) {}
+    public function __construct(
+        private ExpedienteService $expedienteService,
+        private ExpedienteHistorialService $historialService,
+    ) {}
 
     public function bandeja(Request $request)
     {
@@ -48,6 +52,16 @@ class ExpedienteController extends Controller
                 $inner->where('codigo', 'like', "%{$q}%")
                     ->orWhere('asunto', 'like', "%{$q}%");
             });
+        }
+
+        if ($request->filled('antiguedad_min')) {
+            $dias = $request->integer('antiguedad_min');
+            $query->where('created_at', '<=', now()->subDays($dias));
+        }
+
+        if ($request->filled('antiguedad_max')) {
+            $dias = $request->integer('antiguedad_max');
+            $query->where('created_at', '>=', now()->subDays($dias));
         }
 
         $expedientes = $query->get();
@@ -171,52 +185,8 @@ class ExpedienteController extends Controller
     {
         $principal = $e->documentoPrincipal;
 
-        $historial = $e->movimientos
-            ->sortByDesc('created_at')
-            ->values()
-            ->map(function ($m, $index) {
-                $isCurrent = $index === 0;
-                $titulos = [
-                    'registro' => 'Registrado',
-                    'recepcion' => 'Recibido',
-                    'derivacion' => 'Derivado',
-                    'devolucion' => 'Devuelto',
-                ];
-
-                $constancia = $m->constancia;
-                $extra = null;
-                if ($constancia) {
-                    $extra = 'Constancia digital · '.substr($constancia->firma_hash, 0, 16).'…';
-                    if ($constancia->sello_texto) {
-                        $extra .= ' · '.$constancia->sello_texto;
-                    }
-                }
-
-                return [
-                    'titulo' => $titulos[$m->tipo_movimiento] ?? $m->tipo_movimiento,
-                    'estado' => $isCurrent ? 'ESTADO ACTUAL' : 'COMPLETADO',
-                    'fecha' => $m->created_at?->format('d/m/Y - H:i'),
-                    'descripcion' => $m->proveido ?? $m->observacion,
-                    'destino' => $m->unidadDestino?->nombre,
-                    'observacion' => $m->observacion,
-                    'usuario' => $m->usuario?->nombre_completo,
-                    'unidad' => $m->unidadActuante?->nombre,
-                    'icono' => match ($m->tipo_movimiento) {
-                        'registro' => 'inventory',
-                        'recepcion' => 'mail',
-                        'derivacion' => 'forward_to_inbox',
-                        'devolucion' => 'undo',
-                        default => 'history',
-                    },
-                    'color' => $isCurrent ? 'secondary' : 'gray',
-                    'extra' => $extra,
-                    'constancia' => $constancia ? [
-                        'firma_hash' => $constancia->firma_hash,
-                        'sello_texto' => $constancia->sello_texto,
-                        'tipo_acto' => $constancia->tipo_acto,
-                    ] : null,
-                ];
-            });
+        $historial = $this->historialService->lineaDeTiempo($e)
+            ->map(fn ($item) => $this->historialService->formatearNodo($item));
 
         $enUnidad = $usuario && $e->unidad_actual_id === $usuario->unidad_activa_id;
 

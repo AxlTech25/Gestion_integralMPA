@@ -125,6 +125,7 @@ class AuthController extends Controller
             'menu' => $this->menuService->forUsuario($usuario),
             'nucleo_menu' => $this->menuService->nucleoSubmenu($usuario),
             'patrimonio_menu' => $this->menuService->patrimonioSubmenu($usuario),
+            'calidad_menu' => $this->menuService->calidadSubmenu($usuario),
         ];
     }
 }

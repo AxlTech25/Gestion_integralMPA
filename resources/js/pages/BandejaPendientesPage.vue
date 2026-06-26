@@ -5,6 +5,13 @@
       <div>
         <h2 class="text-headline-md text-on-surface font-semibold">Bandeja de Pendientes</h2>
         <p class="text-body-sm text-on-surface-variant">Documentos en espera de revisión o derivación</p>
+        <router-link
+          v-if="auth.can('doc.tipos.gestionar')"
+          :to="{ name: 'tipos-documentales' }"
+          class="text-label-md text-primary font-semibold mt-1 inline-block hover:underline"
+        >
+          Catálogo de tipos documentales
+        </router-link>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center bg-surface-container px-3 py-1.5 rounded-lg gap-2">
@@ -29,6 +36,18 @@
             <option v-for="t in docsStore.tiposDocumentales" :key="t.id" :value="t.id">
               {{ t.nombre }}
             </option>
+          </select>
+        </div>
+        <div class="flex items-center bg-surface-container px-3 py-1.5 rounded-lg gap-2">
+          <span class="text-label-md text-on-surface-variant font-semibold">Antigüedad:</span>
+          <select
+            v-model="filterAntiguedad"
+            class="bg-transparent border-none p-0 text-body-sm font-semibold focus:ring-0 cursor-pointer text-on-surface focus:outline-none"
+          >
+            <option value="todas">Todas</option>
+            <option value="5">Más de 5 días</option>
+            <option value="10">Más de 10 días</option>
+            <option value="30">Más de 30 días</option>
           </select>
         </div>
         <button
@@ -313,8 +332,10 @@ const route = useRoute();
 
 const filterPriority = ref('todas');
 const filterType = ref('todos');
+const filterAntiguedad = ref('todas');
 const appliedPriority = ref('todas');
 const appliedType = ref('todos');
+const appliedAntiguedad = ref('todas');
 
 const derivarModalOpen = ref(false);
 const selectedExpediente = ref(null);
@@ -390,10 +411,12 @@ function prioridadLabel(prioridad) {
 async function aplicarFiltros() {
   appliedPriority.value = filterPriority.value;
   appliedType.value = filterType.value;
+  appliedAntiguedad.value = filterAntiguedad.value;
   paginaActual.value = 1;
   await docsStore.cargarBandeja({
     prioridad: appliedPriority.value === 'todas' ? undefined : appliedPriority.value,
     tipo_documental_id: appliedType.value === 'todos' ? undefined : appliedType.value,
+    antiguedad_min: appliedAntiguedad.value === 'todas' ? undefined : appliedAntiguedad.value,
   });
 }
 

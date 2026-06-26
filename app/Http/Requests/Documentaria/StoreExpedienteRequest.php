@@ -19,7 +19,13 @@ class StoreExpedienteRequest extends FormRequest
             'asunto' => ['required', 'string', 'max:500'],
             'prioridad' => ['required', Rule::in(['baja', 'media', 'alta', 'urgente'])],
             'proveido' => ['nullable', 'string', 'max:2000'],
-            'archivo' => ['nullable', 'file', 'max:10240'],
+            'archivo' => [
+                'nullable',
+                'file',
+                'max:10240',
+                'mimes:pdf,jpg,jpeg,png,webp',
+                'mimetypes:application/pdf,image/jpeg,image/png,image/webp',
+            ],
         ];
     }
 }

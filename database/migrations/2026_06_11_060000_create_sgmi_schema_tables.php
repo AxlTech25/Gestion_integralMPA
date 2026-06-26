@@ -423,6 +423,7 @@ return new class extends Migration
             ['pat.equipo.consultar', 'MOD-PAT-TI', 'Consultar equipos'],
             ['pat.ficha.gestionar', 'MOD-PAT-TI', 'Gestionar fichas'],
             ['pat.incidencia.gestionar', 'MOD-PAT-TI', 'Gestionar incidencias'],
+            ['pat.incidencia.reportar', 'MOD-PAT-TI', 'Reportar incidencias de soporte TI'],
             ['dash.tramitacion.ver', 'MOD-DASH', 'Ver dashboard tramitación'],
             ['dash.estrategico.ver', 'MOD-DASH', 'Ver dashboard estratégico'],
             ['dash.siaf.ver', 'MOD-DASH', 'Ver datos SIAF'],

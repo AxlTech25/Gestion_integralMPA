@@ -64,6 +64,11 @@ export const usePatrimonioStore = defineStore('patrimonio', {
             return data;
         },
 
+        async buscarEquiposSoporte(q) {
+            const { data } = await axios.get('/api/equipos/buscar-soporte', { params: { q } });
+            return data;
+        },
+
         async reportarIncidencia(payload) {
             const { data } = await axios.post('/api/incidencias', payload);
             await this.cargarIncidencias({ solo_abiertas: true });

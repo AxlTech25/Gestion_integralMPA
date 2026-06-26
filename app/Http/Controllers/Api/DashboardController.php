@@ -18,6 +18,10 @@ class DashboardController extends Controller
             return response()->json(['message' => 'No autenticado.'], 401);
         }
 
+        if (! $usuario->hasAnyPermiso(['doc.expediente.consultar', 'dash.tramitacion.ver'])) {
+            return response()->json(['message' => 'No tiene permiso para ver el panel operativo.'], 403);
+        }
+
         $dias = $request->integer('dias', 30);
 
         return response()->json($this->dashboardService->operativo($usuario, $dias));

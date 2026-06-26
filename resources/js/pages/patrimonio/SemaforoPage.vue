@@ -39,6 +39,7 @@
             <th class="px-4 py-2 text-left">Código</th>
             <th class="px-4 py-2 text-left">Equipo</th>
             <th class="px-4 py-2 text-left">Unidad</th>
+            <th class="px-4 py-2 text-left">Custodio</th>
             <th class="px-4 py-2 text-left">Probabilidad</th>
           </tr>
         </thead>
@@ -49,10 +50,11 @@
             </td>
             <td class="px-4 py-2">{{ c.marca }} {{ c.modelo }}</td>
             <td class="px-4 py-2">{{ c.unidad }}</td>
+            <td class="px-4 py-2">{{ c.custodio_nombre ?? '—' }}</td>
             <td class="px-4 py-2 font-semibold text-error">{{ (c.probabilidad_falla * 100).toFixed(1) }}%</td>
           </tr>
           <tr v-if="!store.criticos.length">
-            <td colspan="4" class="px-4 py-6 text-center text-on-surface-variant">Sin equipos en nivel rojo.</td>
+            <td colspan="5" class="px-4 py-6 text-center text-on-surface-variant">Sin equipos en nivel rojo.</td>
           </tr>
         </tbody>
       </table>

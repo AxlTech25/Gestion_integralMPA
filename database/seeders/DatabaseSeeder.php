@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             SellosInstitucionalesSeeder::class,
             TiposDocumentalesSeeder::class,
             SgmiSeeder::class,
+            PilotoSeeder::class,
             EquiposDemoSeeder::class,
             SiafDemoSeeder::class,
         ]);

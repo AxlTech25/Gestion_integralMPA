@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Equipo;
 use App\Models\MlPrediccion;
 use App\Services\Patrimonio\MlPredictionService;
 use Illuminate\Http\Request;
@@ -22,13 +21,22 @@ class MlPrediccionController extends Controller
         $nivel = $request->string('nivel', 'rojo');
 
         $predicciones = MlPrediccion::query()
+            ->select('ml_predicciones.*')
             ->with(['equipo.unidad'])
+            ->joinSub(
+                MlPrediccion::query()
+                    ->selectRaw('equipo_id, MAX(calculado_at) as max_calc')
+                    ->groupBy('equipo_id'),
+                'ult',
+                function ($join) {
+                    $join->on('ml_predicciones.equipo_id', '=', 'ult.equipo_id')
+                        ->on('ml_predicciones.calculado_at', '=', 'ult.max_calc');
+                }
+            )
             ->where('nivel_riesgo', $nivel)
             ->orderByDesc('probabilidad_falla')
-            ->limit(20)
-            ->get()
-            ->unique('equipo_id')
-            ->values();
+            ->limit(50)
+            ->get();
 
         return response()->json($predicciones->map(fn ($p) => [
             'equipo_id' => $p->equipo_id,

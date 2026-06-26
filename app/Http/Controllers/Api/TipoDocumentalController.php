@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Documentaria\StoreTipoDocumentalRequest;
+use App\Http\Requests\Documentaria\UpdateTipoDocumentalRequest;
 use App\Models\TipoDocumental;
 use App\Models\Usuario;
+use App\Services\Documentaria\TipoDocumentalService;
 use Illuminate\Http\Request;
 
 class TipoDocumentalController extends Controller
 {
+    public function __construct(private TipoDocumentalService $tipoService) {}
+
     public function index(Request $request)
     {
         $usuario = $request->user();
@@ -18,8 +23,13 @@ class TipoDocumentalController extends Controller
 
         $query = TipoDocumental::query()
             ->with('unidadEmisora:id,codigo_org,nombre')
-            ->where('activo', true)
             ->orderBy('nombre');
+
+        if ($request->boolean('gestion') && $usuario->hasPermiso('doc.tipos.gestionar')) {
+            return response()->json($query->get());
+        }
+
+        $query->where('activo', true);
 
         if (! $usuario->hasPermiso('doc.tipos.gestionar')) {
             $unidadId = $usuario->unidad_activa_id;
@@ -34,6 +44,20 @@ class TipoDocumentalController extends Controller
         }
 
         return response()->json($query->get());
+    }
+
+    public function store(StoreTipoDocumentalRequest $request)
+    {
+        $tipo = $this->tipoService->crear($request->validated(), $request->user());
+
+        return response()->json($tipo, 201);
+    }
+
+    public function update(UpdateTipoDocumentalRequest $request, TipoDocumental $tipo)
+    {
+        $tipo = $this->tipoService->actualizar($tipo, $request->validated(), $request->user());
+
+        return response()->json($tipo);
     }
 
     public function previewCodigo(Request $request, TipoDocumental $tipo)

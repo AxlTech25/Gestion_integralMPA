@@ -1,0 +1,12 @@
+{
+  "periodo": "2026-06",
+  "pim": 45200000.0,
+  "ejecucion_total": 30184000.0,
+  "porcentaje_ejecucion": 66.78,
+  "detalle_resumido": {
+    "personal": 41.2,
+    "servicios": 19.5,
+    "inversion": 14.8,
+    "bienes": 8.3
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "personal": [
+    {
+      "codigo_siga": "SIGA-P-001",
+      "dni": "45230101",
+      "nombre_completo": "Carlos Mendoza Quispe",
+      "codigo_org": "ORG-061",
+      "unidad_codigo_siga": "SIGA-U-061",
+      "activo": true
+    },
+    {
+      "codigo_siga": "SIGA-P-002",
+      "dni": "45230102",
+      "nombre_completo": "María Elena Rojas",
+      "codigo_org": "ORG-052",
+      "unidad_codigo_siga": "SIGA-U-052",
+      "activo": true
+    },
+    {
+      "codigo_siga": "SIGA-P-003",
+      "dni": "45230103",
+      "nombre_completo": "Jorge Huamán Torres",
+      "codigo_org": "ORG-059",
+      "unidad_codigo_siga": "SIGA-U-059",
+      "activo": true
+    },
+    {
+      "codigo_siga": "SIGA-P-004",
+      "dni": "45230104",
+      "nombre_completo": "Ana Lucía Vargas",
+      "codigo_org": "ORG-048",
+      "unidad_codigo_siga": "SIGA-U-048",
+      "activo": true
+    },
+    {
+      "codigo_siga": "SIGA-P-005",
+      "dni": "45230105",
+      "nombre_completo": "Pedro Salinas Cáceres",
+      "codigo_org": "ORG-057",
+      "unidad_codigo_siga": "SIGA-U-057",
+      "activo": true
+    },
+    {
+      "codigo_siga": "SIGA-P-006",
+      "dni": "45230106",
+      "nombre_completo": "Rosa Mamani Flores",
+      "codigo_org": "ORG-058",
+      "unidad_codigo_siga": "SIGA-U-058",
+      "activo": true
+    },
+    {
+      "codigo_siga": "SIGA-P-007",
+      "dni": "45230107",
+      "nombre_completo": "Luis Quispe Arce",
+      "codigo_org": "ORG-061",
+      "unidad_codigo_siga": "SIGA-U-061",
+      "activo": false
+    },
+    {
+      "codigo_siga": "SIGA-P-008",
+      "dni": "45230108",
+      "nombre_completo": "Sofía Condori López",
+      "codigo_org": "ORG-052",
+      "unidad_codigo_siga": "SIGA-U-052",
+      "activo": true
+    }
+  ]
+}

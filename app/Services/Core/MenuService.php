@@ -51,6 +51,31 @@ class MenuService
                 'route' => 'patrimonio-inventario',
                 'permission' => 'pat.equipo.consultar',
             ],
+            [
+                'key' => 'soporte-ti',
+                'label' => 'Soporte TI',
+                'icon' => 'build',
+                'route' => 'patrimonio-incidencias',
+                'permission' => 'pat.incidencia.reportar',
+            ],
+            [
+                'key' => 'calidad',
+                'label' => 'Calidad SGC',
+                'icon' => 'verified',
+                'route' => 'calidad',
+                'any_permission' => [
+                    'calidad.nc.consultar',
+                    'calidad.nc.reportar',
+                    'calidad.nc.gestionar',
+                ],
+            ],
+            [
+                'key' => 'integraciones',
+                'label' => 'Integraciones',
+                'icon' => 'sync',
+                'route' => 'integraciones',
+                'permission' => 'int.sync.ejecutar',
+            ],
         ];
 
         return array_values(array_filter($items, function (array $item) use ($usuario) {
@@ -115,7 +140,7 @@ class MenuService
                 'key' => 'pat-incidencias',
                 'label' => 'Incidencias',
                 'route' => 'patrimonio-incidencias',
-                'permission' => 'pat.incidencia.gestionar',
+                'any_permission' => ['pat.incidencia.gestionar', 'pat.incidencia.reportar'],
             ],
             [
                 'key' => 'pat-semaforo',
@@ -126,6 +151,37 @@ class MenuService
         ];
 
         return array_values(array_filter($items, function (array $item) use ($usuario) {
+            if (! empty($item['any_permission']) && $usuario->hasAnyPermiso($item['any_permission'])) {
+                return true;
+            }
+
+            return empty($item['permission']) || $usuario->hasPermiso($item['permission']);
+        }));
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function calidadSubmenu(Usuario $usuario): array
+    {
+        $items = [
+            [
+                'key' => 'calidad-hub',
+                'label' => 'Inicio',
+                'route' => 'calidad',
+                'any_permission' => ['calidad.nc.consultar', 'calidad.nc.reportar', 'calidad.nc.gestionar'],
+            ],
+            [
+                'key' => 'calidad-nc',
+                'label' => 'No conformidades',
+                'route' => 'calidad-no-conformidades',
+                'any_permission' => ['calidad.nc.consultar', 'calidad.nc.reportar', 'calidad.nc.gestionar'],
+            ],
+        ];
+
+        return array_values(array_filter($items, function (array $item) use ($usuario) {
+            if (! empty($item['any_permission']) && $usuario->hasAnyPermiso($item['any_permission'])) {
+                return true;
+            }
+
             return empty($item['permission']) || $usuario->hasPermiso($item['permission']);
         }));
     }

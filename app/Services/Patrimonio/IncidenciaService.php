@@ -16,11 +16,7 @@ class IncidenciaService
     public function reportar(Equipo $equipo, Usuario $usuario, array $data): Incidencia
     {
         return DB::transaction(function () use ($equipo, $usuario, $data) {
-            if ($equipo->estado_operativo === 'baja') {
-                throw ValidationException::withMessages([
-                    'equipo_id' => ['No se puede reportar sobre un equipo dado de baja.'],
-                ]);
-            }
+            $this->validarEquipoParaReporte($usuario, $equipo);
 
             $incidencia = Incidencia::create([
                 'equipo_id' => $equipo->id,
@@ -70,5 +66,30 @@ class IncidenciaService
 
             return $incidencia->fresh(['equipo.unidad', 'reportador', 'asignadoUtis']);
         });
+    }
+
+    public function validarEquipoParaReporte(Usuario $usuario, Equipo $equipo): void
+    {
+        if ($equipo->estado_operativo === 'baja') {
+            throw ValidationException::withMessages([
+                'equipo_id' => ['No se puede reportar sobre un equipo dado de baja.'],
+            ]);
+        }
+
+        if ($usuario->hasPermiso('pat.incidencia.gestionar')) {
+            return;
+        }
+
+        if (! $usuario->hasPermiso('pat.incidencia.reportar')) {
+            throw ValidationException::withMessages([
+                'equipo_id' => ['No tiene permiso para reportar incidencias.'],
+            ]);
+        }
+
+        if ($equipo->unidad_id !== $usuario->unidad_activa_id) {
+            throw ValidationException::withMessages([
+                'equipo_id' => ['Solo puede reportar incidencias sobre equipos de su unidad.'],
+            ]);
+        }
     }
 }

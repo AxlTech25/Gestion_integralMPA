@@ -22,6 +22,7 @@ class MenuController extends Controller
             'menu' => $this->menuService->forUsuario($usuario),
             'nucleo' => $this->menuService->nucleoSubmenu($usuario),
             'patrimonio' => $this->menuService->patrimonioSubmenu($usuario),
+            'calidad' => $this->menuService->calidadSubmenu($usuario),
         ]);
     }
 }

@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', {
         menu: (state) => state.user?.menu ?? [],
         nucleoMenu: (state) => state.user?.nucleo_menu ?? [],
         patrimonioMenu: (state) => state.user?.patrimonio_menu ?? [],
+        calidadMenu: (state) => state.user?.calidad_menu ?? [],
         can: (state) => (codigo) => {
             if (!state.user) return false;
             if (state.user.permisos?.includes(codigo)) return true;

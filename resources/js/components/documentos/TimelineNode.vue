@@ -29,6 +29,10 @@
           <p class="text-label-md text-on-surface-variant uppercase mb-1 font-semibold">Oficina Actual</p>
           <p class="text-body-md font-medium text-on-surface">{{ oficinaActual }}</p>
         </div>
+        <div v-if="node.permanencia_texto">
+          <p class="text-label-md text-on-surface-variant uppercase mb-1 font-semibold">Tiempo en oficina</p>
+          <p class="text-body-md font-medium text-on-surface">{{ node.permanencia_texto }}</p>
+        </div>
       </div>
 
       <!-- Firmado -->
@@ -49,6 +53,11 @@
             <p class="text-label-md text-on-surface-variant uppercase mb-1 font-semibold">Destino</p>
             <p class="text-body-md font-medium text-on-surface">{{ node.destino }}</p>
           </div>
+          <div v-if="node.oficina_permanencia">
+            <p class="text-label-md text-on-surface-variant uppercase mb-1 font-semibold">Permanencia en oficina</p>
+            <p class="text-body-md font-medium text-on-surface">{{ node.permanencia_texto }}</p>
+            <p class="text-body-sm text-on-surface-variant">{{ node.oficina_permanencia }}</p>
+          </div>
         </div>
         <div v-if="node.observacion" class="bg-surface p-3 rounded border-l-4 border-primary/20">
           <p class="text-label-md text-on-surface-variant font-bold mb-1">Observación:</p>
@@ -66,6 +75,10 @@
         <div>
           <p class="text-label-md text-on-surface-variant uppercase mb-1 font-semibold">Unidad</p>
           <p class="text-body-md font-medium text-on-surface">{{ node.unidad }}</p>
+        </div>
+        <div v-if="node.permanencia_texto" class="col-span-2">
+          <p class="text-label-md text-on-surface-variant uppercase mb-1 font-semibold">Permanencia</p>
+          <p class="text-body-md text-on-surface">{{ node.permanencia_texto }} · {{ node.oficina_permanencia }}</p>
         </div>
       </div>
 

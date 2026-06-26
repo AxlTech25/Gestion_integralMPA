@@ -1,0 +1,74 @@
+{
+  "unidades": [
+    {
+      "codigo_siga": "SIGA-G-003",
+      "codigo_org": "ORG-003",
+      "nombre": "Gerencia Municipal",
+      "tipo": "ejecutivo",
+      "permite_derivacion": true,
+      "activa": true
+    },
+    {
+      "codigo_siga": "SIGA-G-021",
+      "codigo_org": "ORG-021",
+      "nombre": "Gerencia de Planeamiento y Presupuesto",
+      "tipo": "gerencia",
+      "codigo_siga_padre": "SIGA-G-003",
+      "permite_derivacion": true,
+      "activa": true
+    },
+    {
+      "codigo_siga": "SIGA-G-019",
+      "codigo_org": "ORG-019",
+      "nombre": "Secretaría General",
+      "tipo": "gerencia",
+      "codigo_siga_padre": "SIGA-G-003",
+      "permite_derivacion": true,
+      "activa": true
+    },
+    {
+      "codigo_siga": "SIGA-U-061",
+      "codigo_org": "ORG-061",
+      "nombre": "Unidad de Tecnología de la Información y Sistemas (UTIS)",
+      "tipo": "unidad",
+      "codigo_siga_padre": "SIGA-G-021",
+      "permite_derivacion": true,
+      "activa": true
+    },
+    {
+      "codigo_siga": "SIGA-U-052",
+      "codigo_org": "ORG-052",
+      "nombre": "Unidad de Presupuesto",
+      "tipo": "unidad",
+      "codigo_siga_padre": "SIGA-G-021",
+      "permite_derivacion": true,
+      "activa": true
+    },
+    {
+      "codigo_siga": "SIGA-U-059",
+      "codigo_org": "ORG-059",
+      "nombre": "Unidad de Patrimonio",
+      "tipo": "unidad",
+      "codigo_siga_padre": "SIGA-G-021",
+      "permite_derivacion": true,
+      "activa": true
+    },
+    {
+      "codigo_siga": "SIGA-U-048",
+      "codigo_org": "ORG-048",
+      "nombre": "Unidad de Trámite Documentario y Archivo",
+      "tipo": "unidad",
+      "codigo_siga_padre": "SIGA-G-019",
+      "permite_derivacion": true,
+      "activa": true
+    },
+    {
+      "codigo_siga": "SIGA-C-004",
+      "nombre": "Mesa de Concertación (comité)",
+      "tipo": "comite",
+      "codigo_siga_padre": "SIGA-G-003",
+      "permite_derivacion": false,
+      "activa": true
+    }
+  ]
+}

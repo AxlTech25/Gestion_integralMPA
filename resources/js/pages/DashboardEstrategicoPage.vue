@@ -5,6 +5,9 @@
         <h1 class="text-headline-xl text-on-surface font-bold">Dashboard Estratégico</h1>
         <p class="text-body-lg text-on-surface-variant">
           Indicadores consolidados de gestión documental e infraestructura tecnológica.
+          <span v-if="alcanceLabel" class="block text-label-md mt-1 text-primary font-semibold">
+            Alcance: {{ alcanceLabel }}
+          </span>
         </p>
       </div>
       <select
@@ -119,6 +122,12 @@ function recargar() {
 }
 
 const kpis = computed(() => dashStore.estrategico?.kpis ?? {});
+const alcanceLabel = computed(() => {
+    const a = dashStore.estrategico?.alcance;
+    if (!a) return '';
+    if (a === 'institucional') return 'Institucional';
+    return a.length > 48 ? a.slice(0, 46) + '…' : a;
+});
 const semaforo = computed(() => dashStore.estrategico?.semaforo_ti ?? { verde: 0, amarillo: 0, rojo: 0 });
 const gerencias = computed(() => dashStore.estrategico?.tramitacion_gerencias ?? []);
 const alertasTi = computed(() => dashStore.estrategico?.alertas_ti ?? []);

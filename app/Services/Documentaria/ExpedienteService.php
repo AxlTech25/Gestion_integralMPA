@@ -328,6 +328,15 @@ class ExpedienteService
 
     private function guardarAdjunto(Expediente $expediente, UploadedFile $archivo, Usuario $usuario): void
     {
+        $extension = strtolower($archivo->getClientOriginalExtension());
+        $prohibidas = ['exe', 'bat', 'cmd', 'com', 'msi', 'scr', 'ps1', 'vbs', 'js', 'sh', 'php'];
+
+        if (in_array($extension, $prohibidas, true)) {
+            throw ValidationException::withMessages([
+                'archivo' => ['Tipo de archivo no permitido. Use PDF o imágenes (JPG, PNG, WEBP).'],
+            ]);
+        }
+
         $path = $archivo->store("expedientes/{$expediente->id}", 'local');
         $fullPath = Storage::disk('local')->path($path);
         $hash = is_file($fullPath) ? hash_file('sha256', $fullPath) : null;
