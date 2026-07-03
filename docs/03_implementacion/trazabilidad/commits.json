@@ -1,0 +1,184 @@
+{
+  "HU-SEC-01": {
+    "sha": "3a86b19f46b522a681a2a86323487e705d101f4f",
+    "short": "3a86b19",
+    "message": "feat(HU-SEC-01): AutenticaciÃ³n local segura",
+    "date": "2026-07-03T00:23:27-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-SEC-02": {
+    "sha": "c87eb90aba8077ac58c1bd8deff86c998ca90e61",
+    "short": "c87eb90",
+    "message": "feat(HU-SEC-02): Permisos por rol y organigrama",
+    "date": "2026-07-03T00:23:27-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-SEC-03": {
+    "sha": "7d45f96b54a6cdd654a94ac7282649c1ee1d0da9",
+    "short": "7d45f96",
+    "message": "feat(HU-SEC-03): AuditorÃ­a de operaciones",
+    "date": "2026-07-03T00:23:27-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-SEC-04": {
+    "sha": "bae1be7c2e1c6ee06fbfa70ea4c6ddbd82bc2708",
+    "short": "bae1be7",
+    "message": "feat(HU-SEC-04): Consulta auditorÃ­a OCI",
+    "date": "2026-07-03T00:23:28-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-SEC-05": {
+    "sha": "c54af96cda82c37e5e77d97f95edf509e7c91194",
+    "short": "c54af96",
+    "message": "feat(HU-SEC-05): AdministraciÃ³n de usuarios y traslados",
+    "date": "2026-07-03T00:23:28-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-ORG-01": {
+    "sha": "ca8984cee8b1cfb081f7e6a5415c189ad270a3ef",
+    "short": "ca8984c",
+    "message": "docs(HU-ORG-01): CatÃ¡logo de unidades (gerencia real)",
+    "date": "2026-07-03T00:23:28-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-DOC-01": {
+    "sha": "aef66a608a4c94b3367e7d5c9c5d7f435c2a5a07",
+    "short": "aef66a6",
+    "message": "feat(HU-DOC-01): Registro expediente con numeraciÃ³n por tipo",
+    "date": "2026-07-03T00:23:28-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-DOC-02": {
+    "sha": "af753d9ec1e089450fbd63d1a9ebb70a8ceeb24c",
+    "short": "af753d9",
+    "message": "feat(HU-DOC-02): DerivaciÃ³n y devoluciÃ³n",
+    "date": "2026-07-03T00:23:28-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-DOC-03": {
+    "sha": "2d8efad215ba1e4f095f250644cdf97b55e89ca3",
+    "short": "2d8efad",
+    "message": "feat(HU-DOC-03): Trazabilidad e historial",
+    "date": "2026-07-03T00:23:29-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-DOC-04": {
+    "sha": "21221d4c54241d0de9dfa6ad48f99ed6963e106a",
+    "short": "21221d4",
+    "message": "feat(HU-DOC-04): Bandeja de pendientes",
+    "date": "2026-07-03T00:23:29-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-DOC-05": {
+    "sha": "af7ce420515740ca6b309770ef12b780fe10eee4",
+    "short": "af7ce42",
+    "message": "feat(HU-DOC-05): Adjuntos digitalizados",
+    "date": "2026-07-03T00:23:29-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-DOC-06": {
+    "sha": "61832f7b46942b5cb33b8264629366d5f7e04a82",
+    "short": "61832f7",
+    "message": "docs(HU-DOC-06): BÃºsqueda de expedientes",
+    "date": "2026-07-03T00:23:29-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-DOC-07": {
+    "sha": "0cfae15054cac4a4bccad29d9fb77150399a245e",
+    "short": "0cfae15",
+    "message": "feat(HU-DOC-07): CatÃ¡logo tipos documentales",
+    "date": "2026-07-03T00:23:30-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-DOC-08": {
+    "sha": "a77b6bb5214d38a84816da514f21596fe1439c8e",
+    "short": "a77b6bb",
+    "message": "feat(HU-DOC-08): Firma digital y sello",
+    "date": "2026-07-03T00:23:30-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-PAT-01": {
+    "sha": "f96c2f6c0b27592db3a6fe1421d143f4e92cea87",
+    "short": "f96c2f6",
+    "message": "feat(HU-PAT-01): Inventario patrimonial (Patrimonio / UTIS)",
+    "date": "2026-07-03T00:23:30-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-PAT-02": {
+    "sha": "1f2f8cefbd727190e9028c6a2426c6775d1be0e2",
+    "short": "1f2f8ce",
+    "message": "feat(HU-PAT-02): Incidencias tÃ©cnicas",
+    "date": "2026-07-03T00:23:30-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-PAT-03": {
+    "sha": "6924a69f909c9b68eda4e557168862d745a94aad",
+    "short": "6924a69",
+    "message": "feat(HU-PAT-03): ML Random Forest predictivo",
+    "date": "2026-07-03T00:23:30-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-PAT-04": {
+    "sha": "65a0cb338af91f1ec08c2bfe435c49b303ce5fc2",
+    "short": "65a0cb3",
+    "message": "feat(HU-PAT-04): Alertas preventivas (semÃ¡foro)",
+    "date": "2026-07-03T00:23:31-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-PAT-05": {
+    "sha": "425c4fe5387e5da97073bf1b10d135a985e639d1",
+    "short": "425c4fe",
+    "message": "feat(HU-PAT-05): Fichas tÃ©cnicas y de mantenimiento",
+    "date": "2026-07-03T00:23:31-06:00",
+    "impl_commit": "5a891bd"
+  },
+  "HU-DASH-01": {
+    "sha": "dc3da3e63630efdb9f2ea2da4f604ba5c442b2be",
+    "short": "dc3da3e",
+    "message": "feat(HU-DASH-01): Eficiencia en tramitaciÃ³n (sin SLA)",
+    "date": "2026-07-03T00:23:31-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-DASH-02": {
+    "sha": "6ef1cdd9ebed7476c270a2680c9f4a4f50af3bb8",
+    "short": "6ef1cdd",
+    "message": "feat(HU-DASH-02): ConsolidaciÃ³n alertas TI",
+    "date": "2026-07-03T00:23:31-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-DASH-03": {
+    "sha": "7c6a056ac617f8aa04190e5e3ffffc37f5e0b165",
+    "short": "7c6a056",
+    "message": "feat(HU-DASH-03): EjecuciÃ³n presupuestal (SIAF restringido)",
+    "date": "2026-07-03T00:23:32-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-INT-01": {
+    "sha": "7677c8932556c3e5d0eb824e94f603980073ca62",
+    "short": "7677c89",
+    "message": "feat(HU-INT-01): ImportaciÃ³n patrimonio SIGA vÃ­a API",
+    "date": "2026-07-03T00:23:32-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-INT-02": {
+    "sha": "201a1c8079d821816a8f4f14e3fd1a1418d196b1",
+    "short": "201a1c8",
+    "message": "feat(HU-INT-02): Mapeo personal y oficinas SIGA",
+    "date": "2026-07-03T00:23:32-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-INT-03": {
+    "sha": "636635d4e0716fd7df690f7944d011066539be6f",
+    "short": "636635d",
+    "message": "feat(HU-INT-03): Lectura ejecuciÃ³n SIAF",
+    "date": "2026-07-03T00:23:32-06:00",
+    "impl_commit": "71144a5"
+  },
+  "HU-INT-04": {
+    "sha": "c8437892c5b08c451eb73b392c9f948c2a29a0b3",
+    "short": "c843789",
+    "message": "feat(HU-INT-04): Simuladores SIGA y SIAF",
+    "date": "2026-07-03T00:23:32-06:00",
+    "impl_commit": "71144a5"
+  }
+}
